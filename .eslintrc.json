@@ -1,0 +1,21 @@
+{
+  "root": true,
+  "plugins": ["@nrwl/nx"],
+  "extends": [
+    "plugin:@nrwl/nx/react-typescript"],
+  "overrides": [
+
+    {
+      "files": ["*.ts", "*.tsx"],
+      "extends": ["plugin:@nrwl/nx/typescript"],
+      "rules": {
+        "@typescript-eslint/no-explicit-any": "off",
+         "@typescript-eslint/no-unused-vars": "off",
+          "react-hooks/exhaustive-deps": "off"
+      }
+    }
+  ],
+  "env": {
+    "jest": true
+  }
+}
