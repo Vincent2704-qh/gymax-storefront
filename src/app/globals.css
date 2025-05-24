@@ -46,3 +46,7 @@
 .swiper-horizontal.swiper-pagination-bullets .swiper-pagination-bullet {
   @apply bg-accent;
 }
+
+html {
+  scroll-behavior: smooth;
+}

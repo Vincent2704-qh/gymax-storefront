@@ -5,7 +5,6 @@ const nextConfig = {
       { hostname: 'avatars.githubusercontent.com' },
       { hostname: 'avatar.vercel.sh' },
       { hostname: 'lh3.googleusercontent.com' },
-      { hostname: 'cdn.meetyapp.io' },
     ],
   },
   env: {

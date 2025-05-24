@@ -28,9 +28,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${oswald.variable} ${roboto.variable}`}>
-        <Header />
         {children}
-        <Footer />
       </body>
     </html>
   );
