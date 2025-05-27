@@ -172,7 +172,7 @@ class AxiosClient {
             this.removeAccessToken();
             this.removeRefreshToken();
             removeItem(LocalStorageEnum.UserInfo);
-            location.href = "/login";
+            location.href = "/auth";
           });
       }, 300);
     }

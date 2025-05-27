@@ -120,7 +120,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     Cookies.remove(CookieStorageEnum.RefeshToken);
     removeItem(LocalStorageEnum.UserInfo);
     setCustomer(null);
-    router.push("/auth");
+    router.push("/");
   };
 
   return (

@@ -20,11 +20,11 @@ const Header = () => {
 
   const handleRedireactToAccount = useCallback(() => {
     const parsedUserInfo = JSON.parse(userInfo!);
-    const id = String(parsedUserInfo.id);
+    const id = String(parsedUserInfo?.id);
     if (userInfo && userInfo) {
       router.push(`/account/${id}/details`);
     } else {
-      router.push("/login");
+      router.push("/auth");
     }
   }, [userInfo]);
 

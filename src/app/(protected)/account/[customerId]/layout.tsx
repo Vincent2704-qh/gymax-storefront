@@ -9,6 +9,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Footer from "@/components/footer/Footer";
 import Header from "@/components/header/Header";
+import { useCallback, useEffect, useState } from "react";
+import { CustomerDto } from "@/types/customer-type";
+import { CustomerService } from "@/services/customer.service";
+import { toast } from "sonner";
 
 interface CustomerLayoutProps {
   children: React.ReactNode;
@@ -44,36 +48,57 @@ const navigationItems = [
   },
 ];
 
-function RenderNavigation() {
-  const pathname = usePathname();
-  const segments = pathname.split("/");
-  const customerId = segments[segments.length - 2];
-
-  return (
-    <nav className="space-y-1">
-      {navigationItems.map((item, index) => {
-        const href = item.href.replace("[customerId]", customerId);
-        const isActive = pathname.includes(item.path);
-
-        return (
-          <Link key={index} href={href}>
-            <Button
-              variant={isActive ? "secondary" : "ghost"}
-              className="w-full justify-start text-left h-auto py-3 px-3"
-            >
-              <item.icon className="h-4 w-4 mr-3 flex-shrink-0" />
-              <span className="flex-1">{item.label}</span>
-            </Button>
-          </Link>
-        );
-      })}
-    </nav>
-  );
-}
-
 export default function CustomerAccountLayout({
   children,
 }: CustomerLayoutProps) {
+  const pathname = usePathname();
+  const segments = pathname.split("/");
+  const customerId = segments[segments.length - 2];
+  const [customer, setCustomer] = useState<CustomerDto>();
+
+  useEffect(() => {
+    const fetchCustomer = async () => {
+      try {
+        const response = await CustomerService.getCustomerDetail(
+          Number(customerId)
+        );
+        if (response.data) {
+          setCustomer(response.data);
+        }
+      } catch (err) {
+        const errorMessage = "Failed to fetch customer info";
+        toast.error(errorMessage, {
+          description: (err as Error)?.message,
+        });
+      }
+    };
+
+    fetchCustomer();
+  }, [customerId]);
+
+  const renderNavigation = useCallback(() => {
+    return (
+      <nav className="space-y-1">
+        {navigationItems.map((item, index) => {
+          const href = item.href.replace("[customerId]", customerId);
+          const isActive = pathname.includes(item.path);
+
+          return (
+            <Link key={index} href={href}>
+              <Button
+                variant={isActive ? "secondary" : "ghost"}
+                className="w-full justify-start text-left h-auto py-3 px-3"
+              >
+                <item.icon className="h-4 w-4 mr-3 flex-shrink-0" />
+                <span className="flex-1">{item.label}</span>
+              </Button>
+            </Link>
+          );
+        })}
+      </nav>
+    );
+  }, [customerId]);
+
   return (
     <div>
       <Header />
@@ -87,20 +112,20 @@ export default function CustomerAccountLayout({
                   <div className="flex items-center space-x-3">
                     <Avatar className="h-12 w-12">
                       <AvatarImage
-                        src="/placeholder.svg?height=48&width=48"
-                        alt="Định Huy"
+                        src={customer?.avatar}
+                        alt={customer?.lastName}
                       />
-                      <AvatarFallback>DH</AvatarFallback>
+                      <AvatarFallback>CN</AvatarFallback>
                     </Avatar>
                     <div>
                       <p className="text-sm text-gray-600">Tài khoản của</p>
-                      <p className="font-semibold">Đinh Huy</p>
+                      <p className="font-semibold">
+                        {customer?.firstName} {customer?.lastName}
+                      </p>
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent className="pt-0">
-                  <RenderNavigation />
-                </CardContent>
+                <CardContent className="pt-0">{renderNavigation()}</CardContent>
               </Card>
             </div>
 

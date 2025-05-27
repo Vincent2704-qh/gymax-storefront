@@ -1,8 +1,7 @@
 "use client";
 
 import type React from "react";
-
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, Edit, Trash2, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,66 +24,109 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { usePathname } from "next/navigation";
+import { CustomerDto } from "@/types/customer-type";
+import { CustomerService } from "@/services/customer.service";
+import { toast } from "sonner";
 
-interface Address {
-  id: string;
-  name: string;
-  phone: string;
-  address: string;
-  ward: string;
-  district: string;
-  city: string;
-  isDefault: boolean;
+export interface Address {
+  id?: number;
+  address?: string;
+  company?: string;
+  phone?: string;
+  ward?: string;
+  district?: string;
+  city?: string;
+  isDefault?: number; // 0 | 1
+  customerId?: number;
 }
 
 export default function AddressPage() {
-  const [addresses, setAddresses] = useState<Address[]>([
-    {
-      id: "1",
-      name: "Định Huy",
-      phone: "0962212482",
-      address: "123 Đường ABC, Phường XYZ",
-      ward: "Phường 1",
-      district: "Quận 1",
-      city: "TP. Hồ Chí Minh",
-      isDefault: true,
-    },
-    {
-      id: "2",
-      name: "Định Huy",
-      phone: "0962212482",
-      address: "456 Đường DEF, Phường UVW",
-      ward: "Phường 2",
-      district: "Quận 3",
-      city: "TP. Hồ Chí Minh",
-      isDefault: false,
-    },
-  ]);
-
+  const [addresses, setAddresses] = useState<Address[]>([]);
+  const [customer, setCustomer] = useState<CustomerDto>();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingAddress, setEditingAddress] = useState<Address | null>(null);
+  const pathname = usePathname();
+  const segments = pathname.split("/");
+  const customerId = Number(segments[segments.length - 2]);
 
+  // Lấy danh sách địa chỉ
+  const fetchAddresses = async () => {
+    try {
+      const res = await CustomerService.getAddresses(customerId);
+      setAddresses(res.data);
+    } catch (err) {
+      toast.error("Không lấy được danh sách địa chỉ");
+    }
+  };
+
+  // Lấy thông tin customer
+  const fetchCustomer = async () => {
+    try {
+      const response = await CustomerService.getCustomerDetail(customerId);
+      if (response.data) setCustomer(response.data);
+    } catch (err) {
+      toast.error("Không lấy được thông tin khách hàng");
+    }
+  };
+
+  useEffect(() => {
+    fetchCustomer();
+    fetchAddresses();
+    // eslint-disable-next-line
+  }, [customerId]);
+
+  // Thêm địa chỉ mới
   const handleAddAddress = () => {
     setEditingAddress(null);
     setIsDialogOpen(true);
   };
 
+  // Sửa địa chỉ
   const handleEditAddress = (address: Address) => {
     setEditingAddress(address);
     setIsDialogOpen(true);
   };
 
-  const handleDeleteAddress = (id: string) => {
-    setAddresses(addresses.filter((addr) => addr.id !== id));
+  // Xóa địa chỉ
+  const handleDeleteAddress = async (id: number | undefined) => {
+    try {
+      if (!id) {
+        return;
+      }
+
+      await CustomerService.deleteAddress(id);
+      toast.success("Đã xóa địa chỉ");
+      fetchAddresses();
+      // Nếu xóa địa chỉ mặc định thì cũng nên cập nhật lại customer.defaultAddressId
+      if (customer?.defaultAddressId === id) {
+        await CustomerService.updateCustomer(customerId, {
+          defaultAddressId: undefined,
+        });
+        fetchCustomer();
+      }
+    } catch {
+      toast.error("Xóa địa chỉ thất bại");
+    }
   };
 
-  const handleSetDefault = (id: string) => {
-    setAddresses(
-      addresses.map((addr) => ({
-        ...addr,
-        isDefault: addr.id === id,
-      }))
-    );
+  // Đặt làm mặc định
+  const handleSetDefault = async (id: number | undefined) => {
+    try {
+      if (!id) {
+        return;
+      }
+
+      await CustomerService.updateAddress(id, { isDefault: 1 });
+      await CustomerService.updateCustomer(customerId, {
+        defaultAddressId: id,
+      });
+      toast.success("Đã đặt làm địa chỉ mặc định");
+      fetchAddresses();
+      fetchCustomer();
+    } catch {
+      toast.error("Cập nhật địa chỉ mặc định thất bại");
+    }
   };
 
   return (
@@ -96,13 +138,13 @@ export default function AddressPage() {
             <DialogTrigger asChild>
               <Button
                 onClick={handleAddAddress}
-                className="bg-blue-600 hover:bg-blue-700"
+                className="bg-black text-white"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Thêm địa chỉ mới
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-2xl bg-white">
               <DialogHeader>
                 <DialogTitle>
                   {editingAddress ? "Chỉnh sửa địa chỉ" : "Thêm địa chỉ mới"}
@@ -111,20 +153,41 @@ export default function AddressPage() {
               <AddressForm
                 address={editingAddress}
                 onClose={() => setIsDialogOpen(false)}
-                onSave={(address) => {
-                  if (editingAddress) {
-                    setAddresses(
-                      addresses.map((addr) =>
-                        addr.id === editingAddress.id ? address : addr
-                      )
-                    );
-                  } else {
-                    setAddresses([
-                      ...addresses,
-                      { ...address, id: Date.now().toString() },
-                    ]);
+                onSave={async (data, isDefault) => {
+                  try {
+                    if (editingAddress && editingAddress.id) {
+                      await CustomerService.updateAddress(editingAddress.id, {
+                        ...data,
+                        isDefault: isDefault ? 1 : 0,
+                      });
+                      if (isDefault) {
+                        await CustomerService.updateCustomer(customerId, {
+                          defaultAddressId: editingAddress.id,
+                        });
+                      }
+                      toast.success("Cập nhật địa chỉ thành công");
+                    } else {
+                      const res = await CustomerService.createAddress(
+                        customerId,
+                        {
+                          ...data,
+                          isDefault: isDefault ? 1 : 0,
+                          customerId,
+                        }
+                      );
+                      if (isDefault) {
+                        await CustomerService.updateCustomer(customerId, {
+                          defaultAddressId: res.data.id,
+                        });
+                      }
+                      toast.success("Thêm địa chỉ thành công");
+                    }
+                    setIsDialogOpen(false);
+                    fetchAddresses();
+                    fetchCustomer();
+                  } catch {
+                    toast.error("Lưu địa chỉ thất bại");
                   }
-                  setIsDialogOpen(false);
                 }}
               />
             </DialogContent>
@@ -137,8 +200,10 @@ export default function AddressPage() {
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
-                      <h3 className="font-semibold">{address.name}</h3>
-                      {address.isDefault && (
+                      <h3 className="font-semibold">
+                        {customer?.firstName} {customer?.lastName}
+                      </h3>
+                      {address.isDefault === 1 && (
                         <Badge
                           variant="secondary"
                           className="bg-blue-100 text-blue-800"
@@ -163,7 +228,7 @@ export default function AddressPage() {
                       <Edit className="h-4 w-4 mr-1" />
                       Sửa
                     </Button>
-                    {!address.isDefault && (
+                    {address.isDefault !== 1 && (
                       <Button
                         variant="outline"
                         size="sm"
@@ -175,7 +240,7 @@ export default function AddressPage() {
                     )}
                   </div>
                 </div>
-                {!address.isDefault && (
+                {address.isDefault !== 1 && (
                   <div className="mt-3 pt-3 border-t">
                     <Button
                       variant="ghost"
@@ -196,6 +261,7 @@ export default function AddressPage() {
   );
 }
 
+// Form địa chỉ
 function AddressForm({
   address,
   onClose,
@@ -203,51 +269,35 @@ function AddressForm({
 }: {
   address: Address | null;
   onClose: () => void;
-  onSave: (address: Address) => void;
+  onSave: (data: Partial<Address>, isDefault: boolean) => void;
 }) {
   const [formData, setFormData] = useState({
-    name: address?.name || "",
-    phone: address?.phone || "",
     address: address?.address || "",
+    company: address?.company || "",
+    phone: address?.phone || "",
     ward: address?.ward || "",
     district: address?.district || "",
     city: address?.city || "",
-    isDefault: address?.isDefault || false,
+    isDefault: address?.isDefault === 1,
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave({
-      id: address?.id || "",
-      ...formData,
-    });
+    onSave(
+      {
+        address: formData.address,
+        company: formData.company,
+        phone: formData.phone,
+        ward: formData.ward,
+        district: formData.district,
+        city: formData.city,
+      },
+      formData.isDefault
+    );
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="name">Họ và tên</Label>
-          <Input
-            id="name"
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            required
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="phone">Số điện thoại</Label>
-          <Input
-            id="phone"
-            value={formData.phone}
-            onChange={(e) =>
-              setFormData({ ...formData, phone: e.target.value })
-            }
-            required
-          />
-        </div>
-      </div>
-
       <div className="space-y-2">
         <Label htmlFor="address">Địa chỉ cụ thể</Label>
         <Textarea
@@ -260,7 +310,6 @@ function AddressForm({
           required
         />
       </div>
-
       <div className="grid grid-cols-3 gap-4">
         <div className="space-y-2">
           <Label>Phường/Xã</Label>
@@ -271,14 +320,13 @@ function AddressForm({
             <SelectTrigger>
               <SelectValue placeholder="Chọn phường/xã" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-white">
               <SelectItem value="phuong-1">Phường 1</SelectItem>
               <SelectItem value="phuong-2">Phường 2</SelectItem>
               <SelectItem value="phuong-3">Phường 3</SelectItem>
             </SelectContent>
           </Select>
         </div>
-
         <div className="space-y-2">
           <Label>Quận/Huyện</Label>
           <Select
@@ -290,14 +338,13 @@ function AddressForm({
             <SelectTrigger>
               <SelectValue placeholder="Chọn quận/huyện" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-white">
               <SelectItem value="quan-1">Quận 1</SelectItem>
               <SelectItem value="quan-3">Quận 3</SelectItem>
               <SelectItem value="quan-5">Quận 5</SelectItem>
             </SelectContent>
           </Select>
         </div>
-
         <div className="space-y-2">
           <Label>Tỉnh/Thành phố</Label>
           <Select
@@ -307,7 +354,7 @@ function AddressForm({
             <SelectTrigger>
               <SelectValue placeholder="Chọn tỉnh/thành" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-white">
               <SelectItem value="hcm">TP. Hồ Chí Minh</SelectItem>
               <SelectItem value="hanoi">Hà Nội</SelectItem>
               <SelectItem value="danang">Đà Nẵng</SelectItem>
@@ -315,10 +362,29 @@ function AddressForm({
           </Select>
         </div>
       </div>
-
+      <div className="space-y-2">
+        <Label htmlFor="phone">Số điện thoại</Label>
+        <Input
+          id="phone"
+          value={formData.phone}
+          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+          required
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="company">Công ty (nếu có)</Label>
+        <Input
+          id="company"
+          value={formData.company}
+          onChange={(e) =>
+            setFormData({ ...formData, company: e.target.value })
+          }
+        />
+      </div>
       <div className="flex items-center space-x-2">
         <Checkbox
           id="isDefault"
+          className="text-white"
           checked={formData.isDefault}
           onCheckedChange={(checked) =>
             setFormData({ ...formData, isDefault: checked as boolean })
@@ -326,12 +392,11 @@ function AddressForm({
         />
         <Label htmlFor="isDefault">Đặt làm địa chỉ mặc định</Label>
       </div>
-
       <div className="flex justify-end gap-2 pt-4">
         <Button type="button" variant="outline" onClick={onClose}>
           Hủy
         </Button>
-        <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
+        <Button type="submit" className="bg-black text-white">
           {address ? "Cập nhật" : "Thêm địa chỉ"}
         </Button>
       </div>
