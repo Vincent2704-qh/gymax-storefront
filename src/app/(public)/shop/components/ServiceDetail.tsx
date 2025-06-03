@@ -173,7 +173,7 @@ const ServiceDetailContent = ({ service, serviceBrand }: Props) => {
             </h1>
             <div className="flex items-center space-x-4 text-sm">
               <span className="text-gray-600">Thương hiệu:</span>
-              <div className="text-blue-500">{serviceBrand.name}</div>
+              <div className="text-blue-500">{serviceBrand?.name}</div>
               <span className="text-gray-600">Mã sản phẩm:</span>
               <span className="font-medium">
                 SP{service?.id?.toString().padStart(6, "0")}

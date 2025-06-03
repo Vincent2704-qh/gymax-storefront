@@ -1,5 +1,5 @@
 import { axiosClient } from "@/lib/axios";
-import { Cart } from "@/types/app-type.type";
+import { Cart, CartItem } from "@/types/app-type.type";
 import {
   BasePaginationDto,
   BasePaginationResponse,
@@ -17,8 +17,11 @@ export interface UpdateCartItemDto {
 }
 
 export const CartService = {
-  async filterCart(filter: FilterCart) {
-    return axiosClient.get<BasePaginationResponse<Cart>>(`api/cart`, filter);
+  async filterCartItem(filter: FilterCart) {
+    return axiosClient.get<BasePaginationResponse<CartItem>>(
+      `api/cart/filter-cart-items`,
+      filter
+    );
   },
 
   async addItemToCart(data: Cart) {

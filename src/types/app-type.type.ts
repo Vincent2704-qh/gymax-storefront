@@ -1,3 +1,5 @@
+import { ServiceDto } from "./service-type";
+
 export interface Category {
   id?: number;
   name: string;
@@ -36,6 +38,7 @@ export interface CartItem {
   serviceId: number;
   quantity: number;
   selected: number;
+  serviceDetail: ServiceDto;
   createdAt?: string;
   updatedAt?: string;
 }
