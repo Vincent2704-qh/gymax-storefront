@@ -5,6 +5,10 @@ const nextConfig = {
       { hostname: 'avatars.githubusercontent.com' },
       { hostname: 'avatar.vercel.sh' },
       { hostname: 'lh3.googleusercontent.com' },
+      {
+        protocol: "https",
+        hostname: "storage.googleapis.com",
+      },
     ],
   },
   env: {

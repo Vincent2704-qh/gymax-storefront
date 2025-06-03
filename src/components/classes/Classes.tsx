@@ -30,7 +30,7 @@ const classes = [
 
 const Classes = () => {
   return (
-    <section id="service">
+    <section id="trending">
       <motion.div
         variants={fadeIn("up", 0.6)}
         initial="hidden"

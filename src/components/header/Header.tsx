@@ -7,7 +7,7 @@ import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
 import { MdMenu } from "react-icons/md";
 import { Input } from "../ui/input";
-import { Search, ShoppingCart, Heart, CircleUser } from "lucide-react";
+import { Search, ShoppingCart, Heart, CircleUser, Store } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { getItem } from "@/lib/utils";
 import { LocalStorageEnum } from "@/enum/app.enums";
@@ -46,7 +46,7 @@ const Header = () => {
     >
       <div
         className="container mx-auto h-full
-    lg:grid lg:grid-cols-9 lg:gap-6 lg:p-6
+    lg:grid lg:grid-cols-12 lg:gap-6 lg:p-6
     flex items-center justify-between px-4 py-3"
       >
         <div className="lg:col-span-2 ml-2 lg:ml-8">
@@ -62,12 +62,12 @@ const Header = () => {
         </div>
 
         {/* Nav */}
-        <div className="col-span-3">
+        <div className="col-span-4">
           <Nav containerStyles="hidden lg:flex gap-8 text-white text-base uppercase font-medium" />
         </div>
 
         {/* Search */}
-        <div className="hidden lg:flex items-center col-span-3">
+        <div className="hidden lg:flex items-center col-span-4">
           <div className="relative w-full">
             <Input
               type="text"
@@ -79,13 +79,21 @@ const Header = () => {
         </div>
 
         {/* Actions */}
-        <div className="hidden lg:flex items-center gap-6 text-white text-base uppercase font-medium col-span-1">
+        <div className="hidden lg:flex items-center gap-6 text-white text-base uppercase font-medium col-span-2">
           <CircleUser
             className="text-2xl cursor-pointer hover:text-accent"
             onClick={handleRedireactToAccount}
           />
           <ShoppingCart className="text-2xl cursor-pointer hover:text-accent" />
+          <button
+            onClick={() => router.push("/shop")}
+            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-md transition-all"
+          >
+            <Store className="w-5 h-5" />
+            Shopping
+          </button>
         </div>
+
         <button
           onClick={() => setOpenNav(!openNav)}
           className="text-white lg:hidden"

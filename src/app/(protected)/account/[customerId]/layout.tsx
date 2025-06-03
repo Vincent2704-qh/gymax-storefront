@@ -86,8 +86,14 @@ export default function CustomerAccountLayout({
           return (
             <Link key={index} href={href}>
               <Button
-                variant={isActive ? "secondary" : "ghost"}
-                className="w-full justify-start text-left h-auto py-3 px-3"
+                variant="ghost"
+                className={`w-full justify-start mb-2 text-left h-auto py-3 px-3
+                  ${
+                    isActive
+                      ? "bg-gray-200 font-semibold text-gray-900 hover:text-white"
+                      : "hover:bg-red-500 hover:text-white text-gray-700"
+                  }
+                `}
               >
                 <item.icon className="h-4 w-4 mr-3 flex-shrink-0" />
                 <span className="flex-1">{item.label}</span>
@@ -97,7 +103,7 @@ export default function CustomerAccountLayout({
         })}
       </nav>
     );
-  }, [customerId]);
+  }, [customerId, pathname]);
 
   return (
     <div>
