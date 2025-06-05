@@ -16,6 +16,15 @@ export interface UpdateCartItemDto {
   selected?: number;
 }
 
+export interface AddCartItemPayload {
+  customerId: number;
+  items: {
+    serviceId: number;
+    quantity: number;
+    selected: number;
+  }[];
+}
+
 export const CartService = {
   async filterCartItem(filter: FilterCart) {
     return axiosClient.get<BasePaginationResponse<CartItem>>(
@@ -24,7 +33,7 @@ export const CartService = {
     );
   },
 
-  async addItemToCart(data: Cart) {
+  async addItemToCart(data: AddCartItemPayload) {
     return axiosClient.post("api/cart/add", data);
   },
 

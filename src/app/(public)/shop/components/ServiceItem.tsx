@@ -12,15 +12,22 @@ interface Props {
   price: number;
   currencyCode: string;
   redirectToDetail: () => void;
+  onAddToWishlist: (serviceId: number) => void;
+  onAddToCart: (serviceId: number) => void;
+  onBuyNow: (serviceId: number) => void;
 }
 
 const ServiceItem = ({
+  id,
   sImgUrl,
   sTitle,
   sDescription,
   price,
   currencyCode,
   redirectToDetail,
+  onAddToWishlist,
+  onAddToCart,
+  onBuyNow,
 }: Props) => {
   const [isHovered, setIsHovered] = useState(false);
   const [isWishlisted, setIsWishlisted] = useState(false);
@@ -53,24 +60,31 @@ const ServiceItem = ({
           >
             <div className="absolute inset-0 flex items-center justify-center space-x-3">
               <Button
-                size="sm"
+                size="icon"
                 variant="secondary"
-                // onClick={handleWishlistClick}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsWishlisted(true);
+                  onAddToWishlist(id);
+                }}
                 className="bg-white hover:bg-gray-100"
               >
                 <Heart
-                  className={`h-4 w-4 ${
+                  className={`h-5 w-5 ${
                     isWishlisted ? "fill-red-500 text-red-500" : ""
                   }`}
                 />
               </Button>
               <Button
-                size="sm"
-                // onClick={() => onBuyNow(id)}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                size="icon"
+                onClick={(e) => {
+                  e.stopPropagation();
+
+                  onAddToCart(id);
+                }}
+                className="bg-white hover:bg-gray-100"
               >
-                <ShoppingCart className="h-4 w-4 mr-2" />
-                Mua ngay
+                <ShoppingCart className="h-5 w-5 text-blue-600" />
               </Button>
             </div>
           </div>
@@ -89,6 +103,16 @@ const ServiceItem = ({
             <span className="font-bold text-lg text-red-600">
               ₫{formatPrice(price)}
             </span>
+            <Button
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation(); // Ngăn redirect
+                onBuyNow(id);
+              }}
+              className="text-sm text-white bg-blue-600 hover:bg-blue-700"
+            >
+              Mua ngay
+            </Button>
           </div>
         </div>
       </CardContent>

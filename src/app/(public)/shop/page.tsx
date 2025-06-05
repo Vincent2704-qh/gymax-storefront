@@ -15,6 +15,9 @@ import { useRouter } from "next/navigation";
 import { getItem } from "@/lib/utils";
 import Cookies from "js-cookie";
 import { CookieStorageEnum, LocalStorageEnum } from "@/enum/app.enums";
+import { WishlistService } from "@/services/wishlist.service";
+import { toast } from "sonner";
+import { CartService } from "@/services/cart.service";
 
 const ShopPage = () => {
   const {
@@ -27,7 +30,7 @@ const ShopPage = () => {
     redirectToServiceDetail,
   } = useServiceList({
     filter: {
-      limit: 10,
+      limit: 12,
     },
   });
 
@@ -47,31 +50,63 @@ const ShopPage = () => {
     onChangePage(1);
   };
 
-  const handleAddToWishlist = useCallback(() => {
-    const userInfo = getItem(LocalStorageEnum.UserInfo);
+  const handleAddToWishlist = useCallback(async (serviceId: number) => {
+    const userInfoStr = getItem(LocalStorageEnum.UserInfo);
     const accessToken = Cookies.get(CookieStorageEnum.AccessToken);
+    const userInfo = userInfoStr ? JSON.parse(userInfoStr) : null;
+    const userId = userInfo?.id;
 
-    if (!userInfo || !accessToken) {
-      router.push("/auth");
+    if (!userInfoStr || !accessToken) {
+      return router.push("/auth");
+    }
+
+    try {
+      await WishlistService.addToWishlist({
+        customerId: userId,
+        serviceId,
+      });
+      toast.success("Đã thêm vào danh sách yêu thích!");
+    } catch (err) {
+      toast.error("Thêm vào wishlist thất bại!");
     }
   }, []);
 
-  const handleAddToCart = useCallback(() => {
-    const userInfo = getItem(LocalStorageEnum.UserInfo);
+  const handleAddToCart = useCallback(async (serviceId: number) => {
+    const userInfoStr = getItem(LocalStorageEnum.UserInfo);
     const accessToken = Cookies.get(CookieStorageEnum.AccessToken);
+    const userInfo = userInfoStr ? JSON.parse(userInfoStr) : null;
+    const userId = userInfo?.id;
 
-    if (!userInfo || !accessToken) {
-      router.push("/auth");
+    if (!userInfoStr || !accessToken) {
+      return router.push("/auth");
+    }
+
+    try {
+      await CartService.addItemToCart({
+        customerId: userId,
+        items: [
+          {
+            serviceId,
+            quantity: 1,
+            selected: 0, // Mặc định chọn
+          },
+        ],
+      });
+      toast.success("Đã thêm vào giỏ hàng!");
+    } catch (err) {
+      toast.error("Thêm vào giỏ hàng thất bại!");
     }
   }, []);
 
-  const handleBuyNow = useCallback(() => {
+  const handleBuyNow = useCallback((serviceId: number) => {
     const userInfo = getItem(LocalStorageEnum.UserInfo);
     const accessToken = Cookies.get(CookieStorageEnum.AccessToken);
 
     if (!userInfo || !accessToken) {
-      router.push("/auth");
+      return router.push("/auth");
     }
+
+    router.push(`/checkout`);
   }, []);
 
   return (
@@ -118,8 +153,9 @@ const ShopPage = () => {
                 price={item.price}
                 currencyCode={item.currencyCode}
                 redirectToDetail={() => redirectToServiceDetail(item.id!)}
-                // onAddToWishlist={handleAddToWishlist}
-                // onBuyNow={handleBuyNow}
+                onAddToWishlist={() => handleAddToWishlist(item.id!)}
+                onAddToCart={() => handleAddToCart(item.id!)}
+                onBuyNow={() => handleBuyNow(item.id!)}
               />
             ))}
           </div>

@@ -7,9 +7,10 @@ import { Wishlist } from "@/types/app-type.type";
 
 export interface FilterWishlistDto extends BasePaginationDto {
   customerId?: number;
+  search?: string;
 }
 
-export const CategoryService = {
+export const WishlistService = {
   async filterWishlist(filter: FilterWishlistDto) {
     return axiosClient.get<BasePaginationResponse<Wishlist>>(
       `api/wishlist`,

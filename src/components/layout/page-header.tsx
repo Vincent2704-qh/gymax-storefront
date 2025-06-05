@@ -1,16 +1,27 @@
+"use client";
+
 import { Phone } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 interface PageHeaderProps {
   title: string;
+  isCartHeader?: boolean;
 }
 
-const PageHeader = ({ title }: PageHeaderProps) => {
+const PageHeader = ({ title, isCartHeader }: PageHeaderProps) => {
+  const router = useRouter();
+
   return (
     <header className="bg-white border-b border-gray-200 py-4">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
+            <div
+              className={`flex items-center gap-2 ${
+                isCartHeader ? "cursor-pointer hover:opacity-80" : ""
+              }`}
+              onClick={isCartHeader ? () => router.push("/") : undefined}
+            >
               <div className="text-2xl font-bold text-blue-500">GYMMAX</div>
               <div className="text-sm text-gray-600">Tốt & Nhanh</div>
             </div>

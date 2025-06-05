@@ -88,7 +88,10 @@ const CartPage = () => {
   const calculateSubtotal = () => {
     return cartItems
       .filter((item) => selectedItems.includes(item.id?.toString()!))
-      .reduce((sum, item) => sum + item.serviceDetail.price * item.quantity, 0);
+      .reduce(
+        (sum, item) => sum + item.serviceDetail?.price * item.quantity,
+        0
+      );
   };
 
   const calculateDiscount = () => {
@@ -102,7 +105,7 @@ const CartPage = () => {
 
   return (
     <>
-      <PageHeader title="Giỏ hàng" />
+      <PageHeader title="Giỏ hàng" isCartHeader={true} />
       <div className="container mx-auto py-6 px-4">
         <h1 className="text-2xl font-bold mb-6">GIỎ HÀNG</h1>
 
@@ -146,26 +149,26 @@ const CartPage = () => {
                         <div className="w-20 h-20 relative flex-shrink-0">
                           <Image
                             src={
-                              item.serviceDetail.sImage || "/placeholder.svg"
+                              item.serviceDetail?.sImage || "/placeholder.svg"
                             }
-                            alt={item.serviceDetail.productTitle}
+                            alt={item.serviceDetail?.productTitle}
                             fill
                             className="object-contain"
                           />
                         </div>
                         <div>
                           <h3 className="font-medium line-clamp-2">
-                            {item.serviceDetail.productTitle}
+                            {item.serviceDetail?.productTitle}
                           </h3>
                           <p className="text-sm text-muted-foreground mt-1">
-                            {item.serviceDetail.productDesc}
+                            {item.serviceDetail?.productDesc}
                           </p>
                         </div>
                       </div>
                       <div className="col-span-2 text-center">
                         <div className="flex flex-col">
                           <span className="text-red-500 font-medium">
-                            {item.serviceDetail.price.toLocaleString()}₫
+                            {item.serviceDetail?.price.toLocaleString()}₫
                           </span>
                           {/* Remove this section or modify based on available data
                         {item.originalPrice && item.originalPrice > item.price && (
@@ -209,7 +212,7 @@ const CartPage = () => {
                       <div className="col-span-2 flex justify-between items-center">
                         <span className="text-red-500 font-medium">
                           {(
-                            item.serviceDetail.price * item.quantity
+                            item.serviceDetail?.price * item.quantity
                           ).toLocaleString()}
                           ₫
                         </span>
@@ -230,13 +233,6 @@ const CartPage = () => {
                 )}
               </CardContent>
             </Card>
-
-            <div className="flex items-center text-sm mb-4">
-              <div className="flex items-center text-blue-500">
-                <Info className="h-4 w-4 mr-1" />
-                <span>Freeship 15k đơn từ 45k, Freeship 70k đơn từ 100k</span>
-              </div>
-            </div>
           </div>
 
           <div className="lg:col-span-1">

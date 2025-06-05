@@ -20,8 +20,9 @@ export interface Wishlist {
   id?: number;
   customerId: number;
   serviceId: number;
-  createdAt: string;
-  updatedAt: string;
+  service?: ServiceDto;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Cart {

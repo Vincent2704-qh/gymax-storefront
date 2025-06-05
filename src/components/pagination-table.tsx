@@ -4,7 +4,7 @@ import { PaginationTab } from "./pagination-tab";
 type PaginationTableProps = {
   isLoading: boolean;
   currentPage: number;
-  limit: number;
+  limit?: number;
   total: number;
   totalPage: number;
   delta?: number;
@@ -27,9 +27,9 @@ export const PaginationTable = ({
       <div className="text-sm text-muted-foreground">
         {isLoading ? (
           <Skeleton className="h-4 w-40" />
-        ) : (
+        ) : limit ? (
           `Showing ${limit} of ${total} results`
-        )}
+        ) : undefined}
       </div>
       <div className="flex gap-2">
         <PaginationTab

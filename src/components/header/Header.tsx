@@ -84,7 +84,10 @@ const Header = () => {
             className="text-2xl cursor-pointer hover:text-accent"
             onClick={handleRedireactToAccount}
           />
-          <ShoppingCart className="text-2xl cursor-pointer hover:text-accent" />
+          <ShoppingCart
+            className="text-2xl cursor-pointer hover:text-accent"
+            onClick={() => router.push("/cart")}
+          />
           <button
             onClick={() => router.push("/shop")}
             className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-md transition-all"

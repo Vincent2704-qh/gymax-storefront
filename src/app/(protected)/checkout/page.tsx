@@ -139,7 +139,7 @@ const CheckoutPage = () => {
 
   return (
     <>
-      <PageHeader title="Thanh toán" />
+      <PageHeader title="Thanh toán" isCartHeader={true} />
       <div className="container mx-auto py-6 px-4 bg-gray-50 min-h-screen">
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -332,7 +332,7 @@ const CheckoutPage = () => {
                             <CreditCard className="h-5 w-5 text-blue-500" />
                           </div>
                           <Label htmlFor="cod" className="font-medium">
-                            Thanh toán tiền mặt
+                            Thanh toán tiền mặt khi nhận hàng
                           </Label>
                         </div>
                       </div>
@@ -340,104 +340,23 @@ const CheckoutPage = () => {
 
                     <div className="border rounded-md p-4 mb-3">
                       <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="viettel" id="viettel" />
+                        <RadioGroupItem value="paypal" id="paypal" />
                         <div className="flex items-center">
-                          <div className="w-8 h-8 bg-red-100 rounded-md flex items-center justify-center mr-2">
+                          <div className="w-8 h-8 rounded-md flex items-center justify-center mr-2">
                             <Image
-                              src="/placeholder.svg"
-                              alt="Viettel Money"
+                              src="/img/paypal.png"
+                              alt="Paypal"
                               width={20}
                               height={20}
                             />
                           </div>
-                          <Label htmlFor="viettel" className="font-medium">
-                            Viettel Money
-                          </Label>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="border rounded-md p-4 mb-3">
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="momo" id="momo" />
-                        <div className="flex items-center">
-                          <div className="w-8 h-8 bg-pink-100 rounded-md flex items-center justify-center mr-2">
-                            <Image
-                              src="/placeholder.svg"
-                              alt="Momo"
-                              width={20}
-                              height={20}
-                            />
-                          </div>
-                          <Label htmlFor="momo" className="font-medium">
-                            Ví Momo
-                          </Label>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="border rounded-md p-4 mb-3">
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="zalopay" id="zalopay" />
-                        <div className="flex items-center">
-                          <div className="w-8 h-8 bg-blue-100 rounded-md flex items-center justify-center mr-2">
-                            <Image
-                              src="/placeholder.svg"
-                              alt="ZaloPay"
-                              width={20}
-                              height={20}
-                            />
-                          </div>
-                          <Label htmlFor="zalopay" className="font-medium">
-                            Ví ZaloPay
-                          </Label>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="border rounded-md p-4 mb-3 bg-blue-50">
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="vnpay" id="vnpay" checked />
-                        <div className="flex items-center">
-                          <div className="w-8 h-8 bg-blue-100 rounded-md flex items-center justify-center mr-2">
-                            <Image
-                              src="/placeholder.svg"
-                              alt="VNPAY"
-                              width={20}
-                              height={20}
-                            />
-                          </div>
-                          <Label htmlFor="vnpay" className="font-medium">
-                            VNPAY
-                          </Label>
-                        </div>
-                      </div>
-                      <div className="mt-2 ml-10 text-sm">
-                        Quét Mã QR từ ứng dụng ngân hàng
-                      </div>
-                    </div>
-
-                    <div className="border rounded-md p-4">
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="card" id="card" />
-                        <div className="flex items-center">
-                          <div className="w-8 h-8 bg-gray-100 rounded-md flex items-center justify-center mr-2">
-                            <CreditCard className="h-5 w-5 text-gray-500" />
-                          </div>
-                          <Label htmlFor="card" className="font-medium">
-                            Thẻ tín dụng/ Ghi nợ
+                          <Label htmlFor="paypal" className="font-medium">
+                            Thanh toán bằng Paypal
                           </Label>
                         </div>
                       </div>
                     </div>
                   </RadioGroup>
-
-                  <Button
-                    variant="outline"
-                    className="mt-4 w-full border-dashed"
-                  >
-                    + Thêm thẻ mới
-                  </Button>
                 </CardContent>
               </Card>
             </div>
@@ -504,12 +423,6 @@ const CheckoutPage = () => {
                       <span className="text-sm">Giảm giá trực tiếp</span>
                       <span>-{calculateDiscount().toLocaleString()}₫</span>
                     </div>
-                    <div className="flex justify-between text-green-600">
-                      <span className="text-sm">Giảm giá vận chuyển</span>
-                      <span>
-                        -{calculateShippingDiscount().toLocaleString()}₫
-                      </span>
-                    </div>
                   </div>
 
                   <Separator className="my-4" />
@@ -519,30 +432,6 @@ const CheckoutPage = () => {
                     <span className="text-red-500 font-bold text-xl">
                       {calculateTotal().toLocaleString()}₫
                     </span>
-                  </div>
-
-                  <div className="text-xs text-right text-muted-foreground mb-4">
-                    (Giá này đã bao gồm thuế GTGT, phí đóng gói, phí vận chuyển
-                    và các chi phí phát sinh khác)
-                  </div>
-
-                  <div className="space-y-3 mb-4">
-                    <div className="flex items-center space-x-2">
-                      <Checkbox id="invoice" />
-                      <label htmlFor="invoice" className="text-sm">
-                        Yêu cầu hoá đơn
-                      </label>
-                    </div>
-                    <div className="text-xs text-muted-foreground ml-6">
-                      Tiki Trading chỉ xuất hoá đơn điện tử
-                    </div>
-
-                    <div className="flex items-center space-x-2">
-                      <Checkbox id="gift" />
-                      <label htmlFor="gift" className="text-sm">
-                        Gửi tặng đến người thân, bạn bè
-                      </label>
-                    </div>
                   </div>
 
                   <Button className="w-full bg-red-500 hover:bg-red-600 text-white">
