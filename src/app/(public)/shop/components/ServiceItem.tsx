@@ -1,8 +1,16 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Heart, ShoppingCart, Eye } from "lucide-react";
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
+import {
+  LocalStorageEnum,
+  ServiceBookingTypeEnum,
+  ServiceType,
+} from "@/enum/app.enums";
+import BookingWidget from "./widget/BookingWidget";
+import { getItem } from "@/lib/utils";
+import BundleOption from "./widget/BundleOption";
 
 interface Props {
   id: number;
@@ -11,6 +19,8 @@ interface Props {
   sDescription: string;
   price: number;
   currencyCode: string;
+  productType: ServiceType;
+  bookingTypeId: number;
   redirectToDetail: () => void;
   onAddToWishlist: (serviceId: number) => void;
   onAddToCart: (serviceId: number) => void;
@@ -24,6 +34,8 @@ const ServiceItem = ({
   sDescription,
   price,
   currencyCode,
+  productType,
+  bookingTypeId,
   redirectToDetail,
   onAddToWishlist,
   onAddToCart,
@@ -31,10 +43,28 @@ const ServiceItem = ({
 }: Props) => {
   const [isHovered, setIsHovered] = useState(false);
   const [isWishlisted, setIsWishlisted] = useState(false);
+  const [isOpenBookingModal, setIsOpenBookingModal] = useState(false);
+  const [isOpenOptionModal, setIsOpenOptionModal] = useState(false);
+
+  const [customerId, setCustomerId] = useState<number>();
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("vi-VN").format(price);
   };
+
+  useEffect(() => {
+    const userInfoStr = getItem(LocalStorageEnum.UserInfo);
+    const userInfo = userInfoStr ? JSON.parse(userInfoStr) : null;
+    setCustomerId(userInfo?.id);
+  }, []);
+
+  const handleOpenBookingWidget = useCallback((bookingTypeId: number) => {
+    if (bookingTypeId === ServiceBookingTypeEnum.Bundle) {
+      setIsOpenOptionModal(true);
+    } else if (bookingTypeId === ServiceBookingTypeEnum.Regular) {
+      setIsOpenBookingModal(true);
+    }
+  }, []);
 
   return (
     <Card
@@ -103,19 +133,47 @@ const ServiceItem = ({
             <span className="font-bold text-lg text-red-600">
               ₫{formatPrice(price)}
             </span>
-            <Button
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation(); // Ngăn redirect
-                onBuyNow(id);
-              }}
-              className="text-sm text-white bg-blue-600 hover:bg-blue-700"
-            >
-              Mua ngay
-            </Button>
+            {productType === ServiceType.Product ? (
+              <Button
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onBuyNow(id);
+                }}
+                className="text-sm text-white bg-blue-600 hover:bg-blue-700"
+              >
+                Mua ngay
+              </Button>
+            ) : productType === ServiceType.Workout ? (
+              <Button
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleOpenBookingWidget(bookingTypeId);
+                }}
+                className="text-sm text-white bg-blue-600 hover:bg-blue-700"
+              >
+                {bookingTypeId === ServiceBookingTypeEnum.Bundle
+                  ? "Quản lí gói tập"
+                  : "Đặt lịch tập"}
+              </Button>
+            ) : undefined}
           </div>
         </div>
       </CardContent>
+      <BookingWidget
+        isOpen={isOpenBookingModal}
+        onClose={() => setIsOpenBookingModal(false)}
+        serviceId={id}
+        customerId={customerId}
+      />
+
+      <BundleOption
+        isOpen={isOpenOptionModal}
+        onClose={() => setIsOpenOptionModal(false)}
+        serviceId={id}
+        customerId={customerId}
+      />
     </Card>
   );
 };

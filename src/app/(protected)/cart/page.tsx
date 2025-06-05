@@ -116,6 +116,7 @@ const CartPage = () => {
                 <div className="grid grid-cols-12 p-4 text-sm font-medium border-b">
                   <div className="col-span-1 flex items-center">
                     <Checkbox
+                      className="text-white"
                       checked={selectAll}
                       onCheckedChange={handleSelectAll}
                       id="select-all"
@@ -138,6 +139,7 @@ const CartPage = () => {
                     >
                       <div className="col-span-1 flex items-center">
                         <Checkbox
+                          className="text-white"
                           checked={selectedItems.includes(item.id?.toString()!)}
                           onCheckedChange={() =>
                             handleSelectItem(item.id?.toString()!)

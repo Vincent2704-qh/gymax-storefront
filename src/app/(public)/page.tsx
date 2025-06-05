@@ -2,7 +2,6 @@ import About from "@/components/about/About";
 import Blog from "@/components/blog/Blog";
 import Classes from "@/components/classes/Classes";
 import Hero from "@/components/hero/Hero";
-import Membership from "@/components/membership/Membership";
 import Team from "@/components/team/Team";
 
 export default function Home() {
@@ -13,7 +12,6 @@ export default function Home() {
       <Classes />
       <Team />
       <Blog />
-      <Membership />
     </>
   );
 }

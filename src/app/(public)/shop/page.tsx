@@ -14,7 +14,12 @@ import { Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { getItem } from "@/lib/utils";
 import Cookies from "js-cookie";
-import { CookieStorageEnum, LocalStorageEnum } from "@/enum/app.enums";
+import {
+  CookieStorageEnum,
+  LocalStorageEnum,
+  ServiceBookingTypeEnum,
+  ServiceType,
+} from "@/enum/app.enums";
 import { WishlistService } from "@/services/wishlist.service";
 import { toast } from "sonner";
 import { CartService } from "@/services/cart.service";
@@ -147,11 +152,15 @@ const ShopPage = () => {
               <ServiceItem
                 key={item.id}
                 id={item.id!}
+                productType={item.productType ?? ServiceType.Product}
                 sImgUrl={item.sImage ?? ""}
                 sTitle={item.productTitle}
                 sDescription={item.productDesc ?? ""}
                 price={item.price}
                 currencyCode={item.currencyCode}
+                bookingTypeId={
+                  item.bookingTypeId ?? ServiceBookingTypeEnum.Regular
+                }
                 redirectToDetail={() => redirectToServiceDetail(item.id!)}
                 onAddToWishlist={() => handleAddToWishlist(item.id!)}
                 onAddToCart={() => handleAddToCart(item.id!)}

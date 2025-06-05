@@ -9,7 +9,6 @@ const links = [
   { name: "trending", target: "trending", offset: -80 },
   { name: "team", target: "team", offset: 0 },
   { name: "blog", target: "blog", offset: -40 },
-  { name: "prices", target: "prices", offset: -40 },
 ];
 
 const Nav = ({ containerStyles }: { containerStyles: string }) => {
