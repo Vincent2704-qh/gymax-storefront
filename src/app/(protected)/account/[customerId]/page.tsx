@@ -1,1 +1,3 @@
-export default function CustomerAccountPage({}) {}
+export default function CustomerAccountPage({}) {
+  return <></>;
+}

@@ -16,6 +16,7 @@ const nextConfig = {
     MEETY_ENV: process.env.NODE_ENV,
     CDN_URL: process.env.CDN_URL,
     PUBLIC_ASSET_VERSION: process.env.PUBLIC_ASSET_VERSION,
+    NEXT_PUBLIC_PAYPAL_CLIENTID: process.env.NEXT_PUBLIC_PAYPAL_CLIENTID,
   },
 };
 

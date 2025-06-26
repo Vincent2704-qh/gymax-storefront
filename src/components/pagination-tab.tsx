@@ -1,7 +1,7 @@
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { useMemo } from 'react';
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useMemo } from "react";
 
-import { Button } from '@/components/ui/button';
+import { Button } from "@/components/ui/button";
 import {
   Pagination,
   PaginationContent,
@@ -10,8 +10,8 @@ import {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
-} from '@/components/ui/pagination';
-import { pagination } from '@/lib/utils';
+} from "@/components/ui/pagination";
+import { pagination } from "@/lib/utils";
 
 type PaginationTabProps = {
   currentPage: number;
@@ -38,6 +38,7 @@ export const PaginationTab = ({
         {currentPage > 1 ? (
           <PaginationItem>
             <PaginationPrevious
+              className=" hover:text-white"
               href="#"
               aria-disabled
               onClick={() =>
@@ -48,7 +49,7 @@ export const PaginationTab = ({
         ) : (
           <Button
             variant="outline"
-            className="border-0"
+            className="border-0 "
             size="sm"
             disabled={true}
           >
@@ -58,8 +59,9 @@ export const PaginationTab = ({
 
         {pages.map((page, index) => (
           <PaginationItem key={index}>
-            {typeof page === 'number' ? (
+            {typeof page === "number" ? (
               <PaginationLink
+                className=" hover:text-white"
                 href="#"
                 isActive={page === currentPage}
                 onClick={() => onChange && onChange(page)}
@@ -75,6 +77,7 @@ export const PaginationTab = ({
         {currentPage < totalPage ? (
           <PaginationItem>
             <PaginationNext
+              className=" hover:text-white"
               // href="#"
               onClick={() => onChange(currentPage + 1)}
             />

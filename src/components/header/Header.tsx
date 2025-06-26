@@ -62,12 +62,12 @@ const Header = () => {
         </div>
 
         {/* Nav */}
-        <div className="col-span-4">
+        <div className="col-span-5">
           <Nav containerStyles="hidden lg:flex gap-8 text-white text-base uppercase font-medium" />
         </div>
 
         {/* Search */}
-        <div className="hidden lg:flex items-center col-span-4">
+        <div className="hidden lg:flex items-center col-span-3">
           <div className="relative w-full">
             <Input
               type="text"
@@ -93,7 +93,7 @@ const Header = () => {
             className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-md transition-all"
           >
             <Store className="w-5 h-5" />
-            Shopping
+            Mua sắm
           </button>
         </div>
 

@@ -39,7 +39,6 @@ interface AuthContextType {
     firstName: string,
     lastName: string,
     phone: string,
-    location: string,
     email: string,
     password: string
   ) => Promise<void>;
@@ -71,7 +70,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     firstName: string,
     lastName: string,
     phone: string,
-    location: string,
     email: string,
     password: string
   ) => {
@@ -82,7 +80,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         email,
         password,
         phone,
-        location,
       });
       if (result.data) {
         toast.success("Create account successfully!");

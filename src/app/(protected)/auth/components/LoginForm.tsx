@@ -109,10 +109,10 @@ export default function LoginForm({ onSwitchToSignup }: LoginFormProps) {
           <button className="text-blue-600 hover:text-blue-700"></button>
         </div>
 
-        <div className="text-center text-sm text-zinc-500">OR</div>
+        {/* <div className="text-center text-sm text-zinc-500">OR</div> */}
 
         {/* Social Login */}
-        <div className="grid grid-cols-2 gap-3">
+        {/* <div className="grid grid-cols-2 gap-3">
           <Button
             variant="outline"
             className="h-12 border-zinc-300 hover:text-white"
@@ -144,7 +144,7 @@ export default function LoginForm({ onSwitchToSignup }: LoginFormProps) {
             </svg>
             Google
           </Button>
-        </div>
+        </div> */}
 
         <div className="text-center text-sm text-zinc-500">
           New to GymMax?{" "}

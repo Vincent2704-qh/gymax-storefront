@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { LocalStorageEnum } from "@/enum/app.enums";
 import { getItem } from "@/lib/utils";
@@ -19,6 +18,10 @@ import type { CartItem, ShippingType } from "@/types/app-type.type";
 import { ChevronRight, CreditCard, Info, Package } from "lucide-react";
 import { toast } from "sonner";
 import PageHeader from "@/components/layout/page-header";
+import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
+import { PaymentService } from "@/services/payment.service";
+import { Address } from "../account/[customerId]/address/page";
+import { CustomerService } from "@/services/customer.service";
 
 const CheckoutPage = () => {
   const [shippingList, setShippingList] = useState<ShippingType[]>([]);
@@ -29,6 +32,107 @@ const CheckoutPage = () => {
   const [discountCode, setDiscountCode] = useState("");
   const [isApplyingDiscount, setIsApplyingDiscount] = useState(false);
   const [appliedDiscounts, setAppliedDiscounts] = useState<string[]>([]);
+  const [addresses, setAddresses] = useState<Address[]>([]);
+  // Get customerId from localStorage or context
+  const [customerId, setCustomerId] = useState<number>();
+
+  // Lấy danh sách địa chỉ
+  useEffect(() => {
+    const fetchAddresses = async () => {
+      try {
+        if (!customerId) return;
+
+        const res = await CustomerService.getAddresses(customerId);
+        setAddresses(res.data);
+      } catch (err) {
+        toast.error("Không lấy được danh sách địa chỉ");
+      }
+    };
+    fetchAddresses();
+  }, [customerId]);
+
+  // Initialize customerId from localStorage
+  useEffect(() => {
+    const userInfoStr = getItem(LocalStorageEnum.UserInfo);
+    const userInfo = userInfoStr ? JSON.parse(userInfoStr) : null;
+    if (userInfo?.id) {
+      console.log("Setting customerId:", userInfo.id);
+      setCustomerId(userInfo.id);
+    }
+  }, []);
+
+  //========================Payment handle==============================
+  const initialOptions = {
+    clientId:
+      process.env.NEXT_PUBLIC_PAYPAL_CLIENTID ?? "THIS_IS_PAYPAL_CLIENT_ID",
+  };
+
+  // Phần onCreateOrder trong CheckoutPage component
+  const onCreateOrder = async () => {
+    try {
+      console.log("Creating PayPal order...");
+
+      const response = await PaymentService.onCreateOrder();
+
+      console.log("Response data:", response.data);
+
+      // Kiểm tra response structure
+      if (response.data && response.data.success && response.data.data) {
+        const paypalData = response.data.data;
+        console.log("PayPal order ID:", paypalData.id);
+        console.log("PayPal order status:", paypalData.status);
+
+        return paypalData.id;
+      } else {
+        console.error("Invalid response structure:", response.data);
+        throw new Error("Invalid response from server");
+      }
+    } catch (err: any) {
+      console.error("Error creating PayPal order:", err);
+
+      // Detailed error logging
+      if (err.response) {
+        console.error("Error response status:", err.response.status);
+        console.error("Error response data:", err.response.data);
+        console.error("Error response headers:", err.response.headers);
+      } else if (err.request) {
+        console.error("No response received:", err.request);
+      } else {
+        console.error("Error message:", err.message);
+      }
+
+      throw err;
+    }
+  };
+
+  const onApprove = async (data: any) => {
+    try {
+      console.log("Approval data:", data);
+
+      if (!data.orderID) {
+        // PayPal trả về orderID, không phải orderId
+        throw new Error("Invalid order ID");
+      }
+
+      const response = await PaymentService.appprovePayment(data.orderID);
+
+      console.log("Approval response:", response);
+
+      if (response.data) {
+        window.location.href = "/complete-payment";
+      } else {
+        throw new Error("Payment approval failed");
+      }
+    } catch (err) {
+      console.error("Error verifying paypal order:", err);
+      window.location.href = "/cancel-payment";
+    }
+  };
+
+  const onError = (error: any) => {
+    console.error("Paypal error", error);
+    window.location.href = "/cancel-payment";
+  };
 
   const handleValidateDiscountCode = useCallback(
     (code: string) => {
@@ -184,57 +288,6 @@ const CheckoutPage = () => {
                       </div>
                     </div>
                   </RadioGroup>
-
-                  <div className="mt-6 border rounded-md p-4 bg-blue-50">
-                    <div className="flex items-center">
-                      <Package className="h-5 w-5 text-blue-500 mr-2" />
-                      <span className="text-sm font-medium">
-                        Gói: Giao siêu tốc 2h, trước 18h hôm nay
-                      </span>
-                    </div>
-
-                    <div className="mt-4 bg-white p-3 rounded-md">
-                      <div className="flex items-center">
-                        <Badge
-                          variant="outline"
-                          className="text-red-500 border-red-500 font-bold mr-2"
-                        >
-                          NOW
-                        </Badge>
-                        <span className="text-sm font-medium">
-                          GIAO SIÊU TỐC 2H
-                        </span>
-                      </div>
-
-                      <div className="mt-3 flex items-start">
-                        <div className="w-12 h-12 relative flex-shrink-0">
-                          <Image
-                            src="/placeholder.svg"
-                            alt="Thảm tập yoga"
-                            fill
-                            className="object-contain"
-                          />
-                        </div>
-                        <div className="ml-3">
-                          <p className="text-sm">
-                            Thảm Tập Yoga TPE 2 Lớp PEAFLO Cao Cấp dày 6mm Kèm
-                            Túi - Màu ngẫu nhiên
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            SL: x1
-                          </p>
-                          <div className="flex items-center mt-1">
-                            <span className="text-sm line-through text-muted-foreground">
-                              165.000₫
-                            </span>
-                            <span className="text-sm text-red-500 font-medium ml-2">
-                              129.000₫
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
                 </CardContent>
               </Card>
 
@@ -264,7 +317,7 @@ const CheckoutPage = () => {
 
               <Card>
                 <CardHeader className="border-b">
-                  <CardTitle>Tiki Khuyến Mãi</CardTitle>
+                  <CardTitle>Khuyến Mãi</CardTitle>
                 </CardHeader>
                 <CardContent className="p-4">
                   <div className="flex items-center gap-2 mb-4">
@@ -272,7 +325,7 @@ const CheckoutPage = () => {
                       <div className="flex items-center">
                         <Image
                           src="/placeholder.svg"
-                          alt="Tiki Extra"
+                          alt="Extra"
                           width={24}
                           height={24}
                         />
@@ -340,17 +393,23 @@ const CheckoutPage = () => {
 
                     <div className="border rounded-md p-4 mb-3">
                       <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="paypal" id="paypal" />
+                        <RadioGroupItem
+                          value="paypalPayment"
+                          id="paypalPayment"
+                        />
                         <div className="flex items-center">
                           <div className="w-8 h-8 rounded-md flex items-center justify-center mr-2">
                             <Image
                               src="/img/paypal.png"
-                              alt="Paypal"
+                              alt="paypalPayment"
                               width={20}
                               height={20}
                             />
                           </div>
-                          <Label htmlFor="paypal" className="font-medium">
+                          <Label
+                            htmlFor="paypalPayment"
+                            className="font-medium"
+                          >
                             Thanh toán bằng Paypal
                           </Label>
                         </div>
@@ -433,10 +492,20 @@ const CheckoutPage = () => {
                       {calculateTotal().toLocaleString()}₫
                     </span>
                   </div>
-
-                  <Button className="w-full bg-red-500 hover:bg-red-600 text-white">
-                    Đặt hàng
-                  </Button>
+                  {selectedPayment === "paypalPayment" ? (
+                    <PayPalScriptProvider options={initialOptions}>
+                      <PayPalButtons
+                        createOrder={onCreateOrder}
+                        onApprove={onApprove}
+                        onError={onError}
+                        fundingSource="paypal"
+                      />
+                    </PayPalScriptProvider>
+                  ) : (
+                    <Button className="w-full bg-red-500 hover:bg-red-600 text-white">
+                      Đặt hàng
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
             </div>

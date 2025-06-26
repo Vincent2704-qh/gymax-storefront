@@ -4,11 +4,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const links = [
-  { name: "home", target: "home", offset: -100 },
-  { name: "about", target: "about", offset: -80 },
-  { name: "trending", target: "trending", offset: -80 },
-  { name: "team", target: "team", offset: 0 },
-  { name: "blog", target: "blog", offset: -40 },
+  { name: "Trang chủ", target: "home", offset: -100 },
+  { name: "Giới thiệu", target: "about", offset: -80 },
+  { name: "Dịch vụ phổ biến", target: "trending", offset: -80 },
+  { name: "Nhân sự", target: "team", offset: 0 },
+  { name: "Tin tức", target: "blog", offset: -40 },
 ];
 
 const Nav = ({ containerStyles }: { containerStyles: string }) => {

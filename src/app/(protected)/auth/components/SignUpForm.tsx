@@ -24,7 +24,6 @@ export default function SignupForm({ onSwitchToLogin }: SignupFormProps) {
     firstName: "",
     lastName: "",
     phone: "",
-    location: "",
   });
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -49,7 +48,6 @@ export default function SignupForm({ onSwitchToLogin }: SignupFormProps) {
       formData.firstName,
       formData.lastName,
       formData.phone,
-      formData.location,
       formData.email,
       formData.password
     );
@@ -131,19 +129,6 @@ export default function SignupForm({ onSwitchToLogin }: SignupFormProps) {
               placeholder="Enter phone number"
             />
           </div>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="location" className="text-sm text-zinc-600">
-            Location
-          </Label>
-          <Input
-            id="location"
-            type="text"
-            value={formData.location}
-            onChange={(e) => handleInputChange("location", e.target.value)}
-            className="h-12 border-zinc-300 focus:border-red-500"
-            placeholder="Enter your location"
-          />
         </div>
 
         <div className="space-y-2">
@@ -229,10 +214,10 @@ export default function SignupForm({ onSwitchToLogin }: SignupFormProps) {
           {isSubmitting ? "Registering..." : "REGISTER"}
         </Button>
 
-        <div className="text-center text-sm text-zinc-500">OR</div>
+        {/* <div className="text-center text-sm text-zinc-500">OR</div> */}
 
         {/* Social Login */}
-        <div className="grid grid-cols-2 gap-3">
+        {/* <div className="grid grid-cols-2 gap-3">
           <Button
             variant="outline"
             className="h-12 border-zinc-300 hover:text-white"
@@ -264,7 +249,7 @@ export default function SignupForm({ onSwitchToLogin }: SignupFormProps) {
             </svg>
             Google
           </Button>
-        </div>
+        </div> */}
 
         <div className="text-center text-sm text-zinc-500">
           Already have a GymMax account?{" "}

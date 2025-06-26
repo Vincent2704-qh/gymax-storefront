@@ -10,8 +10,8 @@ export interface FilterCart extends BasePaginationDto {
 }
 
 export interface UpdateCartItemDto {
-  customerId: number;
-  serviceId: number;
+  customerId?: number;
+  serviceId?: number;
   quantity?: number;
   selected?: number;
 }

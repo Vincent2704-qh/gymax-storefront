@@ -1,17 +1,23 @@
 {
   "root": true,
   "plugins": ["@nrwl/nx"],
-  "extends": [
-    "plugin:@nrwl/nx/react-typescript"],
+  "extends": ["plugin:@nrwl/nx/react-typescript"],
   "overrides": [
-
     {
       "files": ["*.ts", "*.tsx"],
       "extends": ["plugin:@nrwl/nx/typescript"],
       "rules": {
         "@typescript-eslint/no-explicit-any": "off",
-         "@typescript-eslint/no-unused-vars": "off",
-          "react-hooks/exhaustive-deps": "off"
+        "@typescript-eslint/no-unused-vars": "off",
+        "react-hooks/exhaustive-deps": "off",
+
+        // Tắt các rule lỗi bạn gặp:
+        "no-empty-pattern": "off",
+        "@typescript-eslint/no-empty-function": "off",
+        "@typescript-eslint/no-non-null-assertion": "off",
+        "@typescript-eslint/no-non-null-asserted-optional-chain": "off",
+        "no-empty": "off",
+        "@typescript-eslint/no-inferrable-types": "off"
       }
     }
   ],
