@@ -69,11 +69,11 @@ const ServiceDetailPage = () => {
       <Breadcrumb className="ml-6">
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink href="/">Home</BreadcrumbLink>
+            <BreadcrumbLink href="/">Trang chủ</BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbLink href="/shop">Shop</BreadcrumbLink>
+            <BreadcrumbLink href="/shop">Mua sắm</BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>

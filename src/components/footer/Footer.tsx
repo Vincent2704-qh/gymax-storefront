@@ -1,8 +1,7 @@
 "use client";
+
 import Image from "next/image";
 import Link from "next/link";
-import { motion } from "framer-motion";
-
 import {
   FaMapMarkerAlt,
   FaEnvelope,
@@ -15,111 +14,165 @@ import CustomButton from "../button/CustomButton";
 
 const Footer = () => {
   return (
-    <footer className="bg-primary-300 pt-24">
-      <div className="container mx-auto pb-24">
-        <div className="text-white grid grid-cols-1 xl:grid-cols-4 gap-x-8 gap-y-12">
+    <footer className="bg-primary-300 text-white pt-12">
+      <div className="container mx-auto pb-12 px-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+          {/* Cột 1: Giới thiệu */}
           <div className="flex flex-col gap-4">
             <Link href={"#"}>
-              <Image src={"/img/logo.png"} width={117} height={55} alt="" />
+              <Image src={"/img/logo.png"} width={120} height={60} alt="Logo" />
             </Link>
-            <p className="max-w-sm">
-              Lorem ipsum dolor sit amet consectetur adipisicing elit. Dolorum
-              placeat, fuga praesentium, facere magnam iure laudantium provident
-              non, rerum velit consequuntur inventore illo dicta! Iste, veniam
-              quibusdam. Doloribus, est nostrum.
+            <p className="text-sm max-w-sm">
+              Hệ thống phòng gym hàng đầu Việt Nam với trang thiết bị hiện đại
+              và đội ngũ huấn luyện viên chuyên nghiệp.
             </p>
-            <ul className="flex flex-col gap-4">
-              <li className="flex items-center gap-4">
-                <FaMapMarkerAlt className="text-xl text-accent" />
-                <span>
-                  {" "}
-                  CÔNG TY TNHH THỂ THAO GYM MAX Số 128, phố Bùi Xương Trạch,
-                  phường Khương Đình, quận Thanh Xuân, Thành phố Hà Nội Giấy
-                  chứng nhận DKKD số 0107923723 sở Kế Hoạch và Đầu Tư Hà Nội cấp
-                  ngày 17/07/2017
+            <ul className="flex flex-col gap-3">
+              <li className="flex items-start gap-3">
+                <FaMapMarkerAlt className="text-lg text-accent mt-1 flex-shrink-0" />
+                <span className="text-sm">
+                  Số 128, Bùi Xương Trạch, Khương Đình, Thanh Xuân, Hà Nội
                 </span>
               </li>
-              <li className="flex items-center gap-4">
-                <FaPhoneAlt className="text-xl text-accent" />
-                <span>0375321910</span>
+              <li className="flex items-center gap-3">
+                <FaPhoneAlt className="text-lg text-accent" />
+                <span className="text-sm">0375 321 910</span>
               </li>
               <li>
-                <Link href={"#"} className="flex items-center gap-4">
-                  <FaEnvelope className="text-xl text-accent" />
-                  <span>lienhe@gymmax.vn</span>
+                <Link
+                  href="mailto:lienhe@gymmax.vn"
+                  className="flex items-center gap-3 hover:text-accent transition-all"
+                >
+                  <FaEnvelope className="text-lg text-accent" />
+                  <span className="text-sm">lienhe@gymmax.vn</span>
                 </Link>
               </li>
             </ul>
           </div>
+
+          {/* Cột 2: Liên kết nhanh + Mạng xã hội */}
           <div>
-            <h4 className="h4 text-accent mb-4">Recent blog poster</h4>
-            <div className="border-b border-dotted border-gray-400 flex flex-col gap-3 pb-3 mb-4">
-              <Link className="hover:text-accent transition-all" href={"#"}>
-                <h5 className="h5 leading-snug">
-                  How to stay motivated for all exercises
-                </h5>
-                <p className="text-gray-400 text-[12px] tracking-[3px] uppercase">
-                  September 22, 2024
-                </p>
-              </Link>
-            </div>
-            <div className="border-b border-dotted border-gray-400 flex flex-col gap-3 pb-3 mb-4">
-              <Link className="hover:text-accent transition-all" href={"#"}>
-                <h5 className="h5 leading-snug">
-                  How to stay motivated for all exercises
-                </h5>
-                <p className="text-gray-400 text-[12px] tracking-[3px] uppercase">
-                  September 22, 2024
-                </p>
-              </Link>
-            </div>
-            <div className="flex flex-col gap-3 pb-3 mb-4">
-              <Link className="hover:text-accent transition-all" href={"#"}>
-                <h5 className="h5 leading-snug">
-                  How to stay motivated for all exercises
-                </h5>
-                <p className="text-gray-400 text-[12px] tracking-[3px] uppercase">
-                  September 22, 2024
-                </p>
-              </Link>
+            <h4 className="h4 text-accent mb-4">Liên kết nhanh</h4>
+            <ul className="flex flex-col gap-2">
+              <li>
+                <Link
+                  href={"#"}
+                  className="text-sm hover:text-accent transition-all"
+                >
+                  Về chúng tôi
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href={"#"}
+                  className="text-sm hover:text-accent transition-all"
+                >
+                  Dịch vụ
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href={"#"}
+                  className="text-sm hover:text-accent transition-all"
+                >
+                  Bảng giá
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href={"#"}
+                  className="text-sm hover:text-accent transition-all"
+                >
+                  Huấn luyện viên
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href={"#"}
+                  className="text-sm hover:text-accent transition-all"
+                >
+                  Liên hệ
+                </Link>
+              </li>
+            </ul>
+
+            <div className="mt-6">
+              <h5 className="text-accent mb-3 font-semibold">
+                Theo dõi chúng tôi
+              </h5>
+              <div className="flex gap-4">
+                <Link href={"#"} className="hover:text-accent transition-all">
+                  <FaFacebook className="text-xl" />
+                </Link>
+                <Link href={"#"} className="hover:text-accent transition-all">
+                  <FaTwitter className="text-xl" />
+                </Link>
+                <Link href={"#"} className="hover:text-accent transition-all">
+                  <FaYoutube className="text-xl" />
+                </Link>
+              </div>
             </div>
           </div>
-          <div>
-            <h4 className="h4 text-accent mb-4">Google Map</h4>
-          </div>
-          <div>
-            <h4 className="h4 text-accent mb-4">Newsletter</h4>
-            <div className="flex flex-col gap-4">
-              <p>
-                Lorem ipsum dolor sit amet consectetur adipisicing elit. Dolore
-                magni, hic possimus, accusantium veniam dolores ut libero
-                perferendis nulla illum molestias, tenetur earum porro vitae
-                modi quidem quod natus? A?
-              </p>
-              <form>
-                <input
-                  type="text"
-                  placeholder="Your email address"
-                  className="h-[50px] outline-none px-4 text-primary-300"
+
+          {/* Cột 3: Đối tác thanh toán */}
+
+          <div className="space-y-4">
+            <div>
+              <h4 className="h4 text-accent mb-4">Đăng ký nhận tin</h4>
+              <div className="flex flex-col gap-4">
+                <p className="text-sm">
+                  Đăng ký để nhận thông tin về các chương trình khuyến mãi và
+                  tips tập luyện mới nhất.
+                </p>
+                <form className="flex flex-col sm:flex-row gap-2">
+                  <input
+                    type="email"
+                    placeholder="Địa chỉ email của bạn"
+                    className="h-[45px] outline-none px-4 text-primary-300 flex-1 rounded"
+                  />
+                  <CustomButton
+                    containerStyles="h-[45px] px-6 whitespace-nowrap"
+                    text="Đăng ký"
+                  />
+                </form>
+              </div>
+            </div>
+            <div>
+              <h4 className="h4 text-accent mb-4">Đối tác thanh toán</h4>
+              <div className="grid grid-cols-3 gap-4 items-center">
+                <Image src="/img/momo.png" alt="MoMo" width={60} height={60} />
+
+                <Image
+                  src="/img/paypal.png"
+                  alt="PayPal"
+                  width={60}
+                  height={60}
                 />
-                <CustomButton containerStyles="h-[50px] px-8" text="Send" />
-              </form>
+
+                <Image
+                  src="/img/vnpay.png"
+                  alt="VNPay"
+                  width={60}
+                  height={60}
+                />
+              </div>
             </div>
           </div>
         </div>
       </div>
-      <div className="text-white border-t border-white/20 py-12">
-        <div className="container mx-auto h-full">
-          <div>
-            <span>&copy; Copyright 2024 Fitphysique</span>
-            <ul>
-              <li>
-                <Link
-                  href={"#"}
-                  className="text-white hover:text-accent transition-all"
-                ></Link>
-              </li>
-            </ul>
+
+      {/* Copyright */}
+      <div className="text-white border-t border-white/20 py-6">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 text-sm">
+            <span>&copy; 2024 GymMax. Tất cả quyền được bảo lưu.</span>
+            <div className="flex gap-6">
+              <Link href={"#"} className="hover:text-accent transition-all">
+                Chính sách bảo mật
+              </Link>
+              <Link href={"#"} className="hover:text-accent transition-all">
+                Điều khoản sử dụng
+              </Link>
+            </div>
           </div>
         </div>
       </div>

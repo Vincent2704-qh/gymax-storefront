@@ -10,22 +10,22 @@ const stats = [
   {
     number: 19,
     icon: FaBriefcase,
-    text: "training courses",
+    text: "Khóa đào tạo",
   },
   {
     number: 879,
     icon: FaClock,
-    text: "working hours",
+    text: "Giờ luyện tập",
   },
   {
     number: 150,
     icon: ImUsers,
-    text: "happy customers",
+    text: "Khách hàng hài lòng",
   },
   {
     number: 9,
     icon: FaTrophy,
-    text: "international awards",
+    text: "Giải thưởng quốc tế",
   },
 ];
 

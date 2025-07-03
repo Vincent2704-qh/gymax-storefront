@@ -7,6 +7,7 @@ import {
 
 export interface FilterCart extends BasePaginationDto {
   customerId?: number;
+  selected?: number;
 }
 
 export interface UpdateCartItemDto {

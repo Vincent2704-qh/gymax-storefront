@@ -7,8 +7,11 @@ import "swiper/css";
 import "swiper/css/navigation";
 import CustomButton from "../button/CustomButton";
 import SwiperNavButtons from "../button/SwiperNavButtons";
+import { useRouter } from "next/navigation";
 
 const HeroSlider = () => {
+  const router = useRouter();
+
   return (
     <Swiper className="h-full">
       <SwiperSlide>
@@ -19,9 +22,10 @@ const HeroSlider = () => {
               initial="hidden"
               whileInView={"show"}
               viewport={{ once: false, amount: 0.2 }}
-              className="h1 text-center lg:text-left mb-2"
+              className="text-[48px] sm:text-[64px] md:text-[80px] lg:text-[96px] leading-[1.1] font-extrabold text-white text-center lg:text-left mb-4"
             >
-              <span>Where hard</span> work meets success
+              <span className="block">Đặt lịch tập</span>
+              <span className="block">luyện chuyên nghiệp</span>
             </motion.h1>
             <motion.p
               variants={fadeIn("up", 0.4)}
@@ -30,7 +34,8 @@ const HeroSlider = () => {
               viewport={{ once: false, amount: 0.1 }}
               className="text-white italic text-center lg:text-left mb-4"
             >
-              Hello world! My name is Vincent and welcome to geek class
+              Tiết kiệm thời gian – chủ động chọn khung giờ và huấn luyện viên
+              phù hợp với bạn.
             </motion.p>
             <motion.div
               variants={fadeIn("up", 0.6)}
@@ -38,10 +43,12 @@ const HeroSlider = () => {
               whileInView={"show"}
               viewport={{ once: false, amount: 0.2 }}
             >
-              <CustomButton
-                text="Get started"
-                containerStyles="w-[196px] h-[62px]"
-              />
+              <div onClick={() => router.push("/shop")}>
+                <CustomButton
+                  text="Bắt đầu ngay"
+                  containerStyles="w-[196px] h-[62px]"
+                />
+              </div>
             </motion.div>
           </div>
         </div>
@@ -54,9 +61,10 @@ const HeroSlider = () => {
               initial="hidden"
               whileInView={"show"}
               viewport={{ once: false, amount: 0.2 }}
-              className="h1 text-center lg:text-left mb-2"
+              className="text-[48px] sm:text-[64px] md:text-[80px] lg:text-[96px] leading-[1.1] font-extrabold text-white text-center lg:text-left mb-4"
             >
-              <span>Where hard</span> work meets success
+              <span className="block">Biến mục tiêu</span>
+              <span className="block">thành hiện thực</span>
             </motion.h1>
             <motion.p
               variants={fadeIn("up", 0.4)}
@@ -65,7 +73,8 @@ const HeroSlider = () => {
               viewport={{ once: false, amount: 0.1 }}
               className="text-white italic text-center lg:text-left mb-4"
             >
-              Hello world! My name is Vincent and welcome to geek class
+              Hệ thống quản lý buổi tập hiện đại giúp bạn theo dõi tiến trình và
+              không bỏ sót buổi nào.
             </motion.p>
             <motion.div
               variants={fadeIn("up", 0.6)}
@@ -73,10 +82,12 @@ const HeroSlider = () => {
               whileInView={"show"}
               viewport={{ once: false, amount: 0.2 }}
             >
-              <CustomButton
-                text="Get started"
-                containerStyles="w-[196px] h-[62px]"
-              />
+              <div onClick={() => router.push("/shop")}>
+                <CustomButton
+                  text="Bắt đầu ngay"
+                  containerStyles="w-[196px] h-[62px]"
+                />
+              </div>
             </motion.div>
           </div>
         </div>

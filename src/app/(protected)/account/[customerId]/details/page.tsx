@@ -102,7 +102,6 @@ export default function CustomerDetailsPage() {
       phone: formData.phone,
       gender: formData.gender,
       birthDay: birthday,
-      location: formData.location,
     });
 
     toast.success("Cập nhật thông tin thành công!");

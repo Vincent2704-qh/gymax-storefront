@@ -83,7 +83,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
       if (result.data) {
         toast.success("Create account successfully!");
-        router.push("/auth?method=login");
+        router.push("/auth?method=signIn");
       }
     } catch (err: any) {
       toast.error(err?.response?.data?.message || "Customer login failed");

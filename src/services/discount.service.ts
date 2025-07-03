@@ -13,14 +13,22 @@ export interface CouponDto {
   toTime?: number;
   totalUsed?: number;
   totalUsedLimit: number;
+  applyType: number;
+  discountType: number;
   createAt?: string;
   updateAt?: string;
 }
 
+export interface FilterDiscountCoupon {
+  customerId?: number;
+  serviceId?: number[];
+}
+
 export const DiscountService = {
-  filterDiscount() {
+  filterDiscount(filter: FilterDiscountCoupon) {
     return axiosClient.get<BasePaginationResponse<CouponDto>>(
-      `api/discount-coupon`
+      `api/discount-coupon`,
+      filter
     );
   },
 };

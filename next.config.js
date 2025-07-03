@@ -18,6 +18,21 @@ const nextConfig = {
     PUBLIC_ASSET_VERSION: process.env.PUBLIC_ASSET_VERSION,
     NEXT_PUBLIC_PAYPAL_CLIENTID: process.env.NEXT_PUBLIC_PAYPAL_CLIENTID,
   },
+  // ✅ Tắt Fast Refresh để tránh overlay
+  onDemandEntries: {
+    // Giữ các trang cache lâu hơn tránh reload nhiều lần
+    maxInactiveAge: 25 * 1000,
+    pagesBufferLength: 5,
+  },
+  webpack(config, { dev }) {
+    if (dev) {
+      config.optimization.minimize = false; // Không nén code => dễ debug
+    }
+    return config;
+  },
+  experimental: {
+    reactRefresh: false, // ⚠️ tắt Fast Refresh
+  },
 };
 
 module.exports = nextConfig;

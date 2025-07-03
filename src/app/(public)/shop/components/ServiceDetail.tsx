@@ -71,7 +71,7 @@ const ServiceDetailContent = ({ service, serviceBrand }: Props) => {
 
   // Calculate current price (base price + variant price)
   const currentPrice = useMemo(() => {
-    return service.price + (selectedVariant?.price || 0);
+    return service.price;
   }, [service.price, selectedVariant]);
 
   // Set default size when variant changes
@@ -188,8 +188,7 @@ const ServiceDetailContent = ({ service, serviceBrand }: Props) => {
             </div>
             {selectedVariant && selectedVariant.price > 0 && (
               <div className="text-sm text-gray-600">
-                Giá gốc: ₫{formatPrice(service.price)} + Phụ phí: ₫
-                {formatPrice(selectedVariant.price)}
+                Giá gốc: ₫{formatPrice(service.price)}
               </div>
             )}
           </div>
@@ -251,7 +250,9 @@ const ServiceDetailContent = ({ service, serviceBrand }: Props) => {
                   >
                     {size.size}
                     <span className="ml-1 text-xs text-gray-500">
-                      ({size.quantity} có sẵn)
+                      {size.quantity === 0
+                        ? "Hết hàng"
+                        : `${size.quantity} có sẵn`}
                     </span>
                   </button>
                 ))}

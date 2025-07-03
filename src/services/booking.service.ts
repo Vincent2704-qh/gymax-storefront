@@ -23,7 +23,6 @@ interface GetTimeCanBookingParams {
   employeeId: number;
   fromTime: number;
   toTime: number;
-  sVariantId?: string;
   bookingQuantity?: number;
   reschedule?: number;
 }
@@ -38,7 +37,6 @@ interface GetAvailableDateParams {
   fromTime: number;
   toTime: number;
   serviceId: number;
-  sVariantId: string;
   employeeId: number;
 }
 

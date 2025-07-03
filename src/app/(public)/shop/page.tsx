@@ -136,13 +136,13 @@ const ShopPage = () => {
           {/* Search and Sort Controls */}
           <div className="flex flex-col sm:flex-row gap-4 mb-6">
             <div className="flex-1 relative">
-              {/* <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
-                placeholder="Tìm kiếm theo tên tên quần áo"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Tìm kiếm theo tên dịch vụ"
+                // value={searchTerm}
+                // onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
-              /> */}
+              />
             </div>
           </div>
 

@@ -62,10 +62,10 @@ export default function SignupForm({ onSwitchToLogin }: SignupFormProps) {
           onClick={onSwitchToLogin}
           className="text-lg text-zinc-500 hover:text-zinc-700 pb-2"
         >
-          Login
+          Đăng nhập
         </button>
         <div className="text-lg font-medium text-zinc-900 border-b-2 border-red-500 pb-2">
-          Register
+          Đăng ký
         </div>
       </div>
 
@@ -74,7 +74,7 @@ export default function SignupForm({ onSwitchToLogin }: SignupFormProps) {
         <div className="grid grid-cols-2 gap-2">
           <div className="space-y-2">
             <Label htmlFor="firstName" className="text-sm text-zinc-600">
-              First Name
+              Tên
             </Label>
             <Input
               id="firstName"
@@ -82,13 +82,13 @@ export default function SignupForm({ onSwitchToLogin }: SignupFormProps) {
               value={formData.firstName}
               onChange={(e) => handleInputChange("firstName", e.target.value)}
               className="h-12 border-zinc-300 focus:border-red-500"
-              placeholder="Enter your full name"
+              placeholder="Nhập tên"
             />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="lastName" className="text-sm text-zinc-600">
-              Last Name
+              Họ
             </Label>
             <Input
               id="lastName"
@@ -96,7 +96,7 @@ export default function SignupForm({ onSwitchToLogin }: SignupFormProps) {
               value={formData.lastName}
               onChange={(e) => handleInputChange("lastName", e.target.value)}
               className="h-12 border-zinc-300 focus:border-red-500"
-              placeholder="Enter your full name"
+              placeholder="Nhập họ"
             />
           </div>
         </div>
@@ -104,7 +104,7 @@ export default function SignupForm({ onSwitchToLogin }: SignupFormProps) {
         <div className="grid grid-cols-2 gap-2">
           <div className="space-y-2">
             <Label htmlFor="email" className="text-sm text-zinc-600">
-              Email
+              Địa chỉ email
             </Label>
             <Input
               id="email"
@@ -112,13 +112,13 @@ export default function SignupForm({ onSwitchToLogin }: SignupFormProps) {
               value={formData.email}
               onChange={(e) => handleInputChange("email", e.target.value)}
               className="h-12 border-zinc-300 focus:border-red-500"
-              placeholder="Enter email address"
+              placeholder="Nhập email"
             />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="phone" className="text-sm text-zinc-600">
-              Phone Number
+              Số điện thoại
             </Label>
             <Input
               id="phone"
@@ -126,14 +126,14 @@ export default function SignupForm({ onSwitchToLogin }: SignupFormProps) {
               value={formData.phone}
               onChange={(e) => handleInputChange("phone", e.target.value)}
               className="h-12 border-zinc-300 focus:border-red-500"
-              placeholder="Enter phone number"
+              placeholder="Nhập số điện thoại"
             />
           </div>
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="password" className="text-sm text-zinc-600">
-            Password
+            Mật khẩu
           </Label>
           <div className="relative">
             <Input
@@ -142,7 +142,7 @@ export default function SignupForm({ onSwitchToLogin }: SignupFormProps) {
               value={formData.password}
               onChange={(e) => handleInputChange("password", e.target.value)}
               className="h-12 border-zinc-300 focus:border-red-500 pr-10"
-              placeholder="Enter password"
+              placeholder="Nhâp mật khẩu"
             />
             <button
               type="button"
@@ -160,7 +160,7 @@ export default function SignupForm({ onSwitchToLogin }: SignupFormProps) {
 
         <div className="space-y-2">
           <Label htmlFor="confirmPassword" className="text-sm text-zinc-600">
-            Confirm Password
+            Xác nhận mật khẩu
           </Label>
           <div className="relative">
             <Input
@@ -171,7 +171,7 @@ export default function SignupForm({ onSwitchToLogin }: SignupFormProps) {
                 handleInputChange("confirmPassword", e.target.value)
               }
               className="h-12 border-zinc-300 focus:border-red-500 pr-10"
-              placeholder="Re-enter password"
+              placeholder="Nhập lại mật khẩu"
             />
             <button
               type="button"
@@ -195,13 +195,13 @@ export default function SignupForm({ onSwitchToLogin }: SignupFormProps) {
             onCheckedChange={(checked) => setAgreeTerms(checked as boolean)}
           />
           <label htmlFor="terms" className="text-sm text-zinc-600">
-            I agree to the{" "}
+            Tôi đồng ý với{" "}
             <button className="text-red-500 hover:text-red-600">
-              Terms of Service
+              Điều khoản dịch vụ
             </button>{" "}
-            and{" "}
+            và{" "}
             <button className="text-red-500 hover:text-red-600">
-              Privacy Policy
+              Chính sách bảo mật
             </button>
           </label>
         </div>
@@ -211,7 +211,7 @@ export default function SignupForm({ onSwitchToLogin }: SignupFormProps) {
           onClick={handleRegister}
           disabled={isSubmitting || !agreeTerms}
         >
-          {isSubmitting ? "Registering..." : "REGISTER"}
+          {isSubmitting ? "Đang đăng ký..." : "ĐĂNG KÝ"}
         </Button>
 
         {/* <div className="text-center text-sm text-zinc-500">OR</div> */}

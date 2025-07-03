@@ -9,45 +9,71 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { LocalStorageEnum } from "@/enum/app.enums";
 import { getItem } from "@/lib/utils";
-import { CartService } from "@/services/cart.service";
 import { type CouponDto, DiscountService } from "@/services/discount.service";
 import { ShippingTypeService } from "@/services/shipping-type";
-import type { CartItem, ShippingType } from "@/types/app-type.type";
-import { ChevronRight, CreditCard, Info, Package } from "lucide-react";
+import type { ShippingType } from "@/types/app-type.type";
+import { ChevronRight, CreditCard, MapPin, Ticket } from "lucide-react";
 import { toast } from "sonner";
 import PageHeader from "@/components/layout/page-header";
 import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 import { PaymentService } from "@/services/payment.service";
-import { Address } from "../account/[customerId]/address/page";
+import type { Address } from "../account/[customerId]/address/page";
 import { CustomerService } from "@/services/customer.service";
+import { useFilterCartItem } from "../cart/hooks/useCartItemList";
 
 const CheckoutPage = () => {
   const [shippingList, setShippingList] = useState<ShippingType[]>([]);
   const [discountCouponList, setDiscountCouponList] = useState<CouponDto[]>([]);
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [selectedShipping, setSelectedShipping] = useState("now");
+  const [selectedShipping, setSelectedShipping] = useState<string>("");
   const [selectedPayment, setSelectedPayment] = useState("cod");
   const [discountCode, setDiscountCode] = useState("");
   const [isApplyingDiscount, setIsApplyingDiscount] = useState(false);
-  const [appliedDiscounts, setAppliedDiscounts] = useState<string[]>([]);
+  const [appliedDiscounts, setAppliedDiscounts] = useState<CouponDto[]>([]);
   const [addresses, setAddresses] = useState<Address[]>([]);
+  const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
+  const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
+  const [isDiscountModalOpen, setIsDiscountModalOpen] = useState(false);
+
   // Get customerId from localStorage or context
   const [customerId, setCustomerId] = useState<number>();
+
+  const { pagination, cartItems, loading, onChangePage, refetch } =
+    useFilterCartItem({
+      filter: {
+        limit: 4,
+        customerId: customerId,
+        selected: 1,
+      },
+    });
 
   // Lấy danh sách địa chỉ
   useEffect(() => {
     const fetchAddresses = async () => {
       try {
         if (!customerId) return;
-
         const res = await CustomerService.getAddresses(customerId);
         setAddresses(res.data);
+        // Set default address if available
+        if (res.data.length > 0 && !selectedAddress) {
+          const defaultAddr =
+            res.data.find((addr: Address) => addr.isDefault) || res.data[0];
+          setSelectedAddress(defaultAddr);
+        }
       } catch (err) {
         toast.error("Không lấy được danh sách địa chỉ");
       }
     };
+
     fetchAddresses();
   }, [customerId]);
 
@@ -67,21 +93,95 @@ const CheckoutPage = () => {
       process.env.NEXT_PUBLIC_PAYPAL_CLIENTID ?? "THIS_IS_PAYPAL_CLIENT_ID",
   };
 
-  // Phần onCreateOrder trong CheckoutPage component
+  //Xử lí momo pay
+  const handleMomoCheckout = async () => {
+    try {
+      const response = await PaymentService.momoPayment();
+      console.log("Payment response:", response.data.payUrl);
+      if (response?.data?.payUrl) {
+        window.location.href = formatURL(response.data.payUrl);
+      } else {
+        console.error("No payment URL returned");
+      }
+    } catch (error: any) {
+      console.error("Error creating payment URL:", error);
+      if (error.response) {
+        console.error("Response status:", error.response.status);
+        console.error(
+          "Response data:",
+          JSON.stringify(error.response.data, null, 2)
+        );
+        console.error("Response headers:", error.response.headers);
+      } else if (error.request) {
+        console.error("Request data:", error.request);
+      } else {
+        console.error("Error message:", error.message);
+      }
+    }
+  };
+
+  function formatURL(input: string) {
+    let url = input.replace(/"/g, "");
+    url = url.replace(/,\?/, "?");
+    return url;
+  }
+
+  //Xử lí vnpay
+  const handleCheckout = async () => {
+    const orderInfo = {
+      address: selectedAddress
+        ? `${selectedAddress.address}, ${selectedAddress.ward}, ${selectedAddress.district}, ${selectedAddress.city}`
+        : "số nhà 29, Thịnh Quang, Đống Đa",
+      phone: Number(selectedAddress?.phone || "0962212482"),
+      email_receiver: selectedAddress?.company || "qhuy113749885hh@gmail.com",
+      receiver_name: selectedAddress?.phone || "Đinh Quốc Huy",
+      cart_id: Math.random().toString(36).substr(2, 10),
+    };
+
+    const payload = {
+      amount: calculateTotal(),
+      orderInfo,
+    };
+
+    console.log(
+      "Sending payment request payload:",
+      JSON.stringify(payload, null, 2)
+    );
+
+    try {
+      const response = await PaymentService.paymentOrders(payload);
+      console.log("Payment response:", response.data);
+      if (response?.data?.url) {
+        window.location.href = formatURL(response.data.url);
+      } else {
+        console.error("No payment URL returned");
+      }
+    } catch (error: any) {
+      console.error("Error creating payment URL:", error);
+      if (error.response) {
+        console.error("Response status:", error.response.status);
+        console.error(
+          "Response data:",
+          JSON.stringify(error.response.data, null, 2)
+        );
+        console.error("Response headers:", error.response.headers);
+      } else if (error.request) {
+        console.error("Request data:", error.request);
+      } else {
+        console.error("Error message:", error.message);
+      }
+    }
+  };
+
   const onCreateOrder = async () => {
     try {
       console.log("Creating PayPal order...");
-
       const response = await PaymentService.onCreateOrder();
-
       console.log("Response data:", response.data);
-
-      // Kiểm tra response structure
       if (response.data && response.data.success && response.data.data) {
         const paypalData = response.data.data;
         console.log("PayPal order ID:", paypalData.id);
         console.log("PayPal order status:", paypalData.status);
-
         return paypalData.id;
       } else {
         console.error("Invalid response structure:", response.data);
@@ -89,8 +189,6 @@ const CheckoutPage = () => {
       }
     } catch (err: any) {
       console.error("Error creating PayPal order:", err);
-
-      // Detailed error logging
       if (err.response) {
         console.error("Error response status:", err.response.status);
         console.error("Error response data:", err.response.data);
@@ -100,7 +198,6 @@ const CheckoutPage = () => {
       } else {
         console.error("Error message:", err.message);
       }
-
       throw err;
     }
   };
@@ -108,16 +205,11 @@ const CheckoutPage = () => {
   const onApprove = async (data: any) => {
     try {
       console.log("Approval data:", data);
-
       if (!data.orderID) {
-        // PayPal trả về orderID, không phải orderId
         throw new Error("Invalid order ID");
       }
-
       const response = await PaymentService.appprovePayment(data.orderID);
-
       console.log("Approval response:", response);
-
       if (response.data) {
         window.location.href = "/complete-payment";
       } else {
@@ -137,12 +229,19 @@ const CheckoutPage = () => {
   const handleValidateDiscountCode = useCallback(
     (code: string) => {
       setIsApplyingDiscount(true);
-      // Simulate API call
       setTimeout(() => {
-        if (code && !appliedDiscounts.includes(code)) {
-          setAppliedDiscounts((prev) => [...prev, code]);
+        const foundCoupon = discountCouponList.find(
+          (coupon) => coupon.couponCode === code
+        );
+        if (
+          foundCoupon &&
+          !appliedDiscounts.find((applied) => applied.id === foundCoupon.id)
+        ) {
+          setAppliedDiscounts((prev) => [...prev, foundCoupon]);
           toast.success("Áp dụng mã giảm giá thành công");
-        } else if (appliedDiscounts.includes(code)) {
+        } else if (
+          appliedDiscounts.find((applied) => applied.couponCode === code)
+        ) {
           toast.error("Mã giảm giá đã được áp dụng");
         } else {
           toast.error("Mã giảm giá không hợp lệ");
@@ -151,16 +250,43 @@ const CheckoutPage = () => {
         setDiscountCode("");
       }, 500);
     },
-    [appliedDiscounts]
+    [appliedDiscounts, discountCouponList]
   );
 
+  const handleApplyCoupon = (coupon: CouponDto) => {
+    if (!appliedDiscounts.find((applied) => applied.id === coupon.id)) {
+      setAppliedDiscounts((prev) => [...prev, coupon]);
+      toast.success("Áp dụng mã giảm giá thành công");
+      setIsDiscountModalOpen(false);
+    } else {
+      toast.error("Mã giảm giá đã được áp dụng");
+    }
+  };
+
+  const handleRemoveCoupon = (couponId: number) => {
+    setAppliedDiscounts((prev) =>
+      prev.filter((coupon) => coupon.id !== couponId)
+    );
+    toast.success("Đã bỏ chọn mã giảm giá");
+  };
+
+  const handleSelectAddress = (address: Address) => {
+    setSelectedAddress(address);
+    setIsAddressModalOpen(false);
+    toast.success("Đã chọn địa chỉ giao hàng");
+  };
+
+  // Fetch shipping types from database
   useEffect(() => {
     const fetchShippingType = async () => {
       try {
         const response = await ShippingTypeService.filterShippingType();
-
         if (response.data.body) {
           setShippingList(response.data.body);
+          // Set default shipping if available
+          if (response.data.body.length > 0 && !selectedShipping) {
+            setSelectedShipping(response.data.body[0].id.toString());
+          }
         }
       } catch (err) {
         toast.error("Không thể tải phương thức vận chuyển", {
@@ -168,14 +294,19 @@ const CheckoutPage = () => {
         });
       }
     };
+
     fetchShippingType();
   }, []);
 
   useEffect(() => {
     const fetchDiscountCoupon = async () => {
       try {
-        const response = await DiscountService.filterDiscount();
-
+        if (!customerId || cartItems.length === 0) return;
+        const serviceIds = cartItems.map((item) => item.serviceId);
+        const response = await DiscountService.filterDiscount({
+          customerId,
+          serviceId: serviceIds,
+        });
         if (response.data.body) {
           setDiscountCouponList(response.data.body);
         }
@@ -185,31 +316,9 @@ const CheckoutPage = () => {
         });
       }
     };
+
     fetchDiscountCoupon();
-  }, []);
-
-  useEffect(() => {
-    const fetchCartItems = async () => {
-      try {
-        const userInfoStr = getItem(LocalStorageEnum.UserInfo);
-        const userInfo = userInfoStr ? JSON.parse(userInfoStr) : null;
-        const userId = userInfo?.id;
-
-        const response = await CartService.filterCartItem({
-          customerId: userId,
-        });
-
-        if (response.data.body) {
-          setCartItems(response.data.body);
-        }
-      } catch (err) {
-        toast.error("Không thể tải giỏ hàng", {
-          description: (err as Error)?.message,
-        });
-      }
-    };
-    fetchCartItems();
-  }, []);
+  }, [customerId, cartItems]);
 
   const calculateSubtotal = () => {
     return cartItems.reduce(
@@ -219,25 +328,34 @@ const CheckoutPage = () => {
   };
 
   const calculateShippingFee = () => {
-    return selectedShipping === "now" ? 28000 : 20000;
+    const selectedShippingType = shippingList.find(
+      (shipping) => shipping.id.toString() === selectedShipping
+    );
+    return selectedShippingType?.price || 0;
   };
 
   const calculateDiscount = () => {
-    // Example discount calculation
-    return appliedDiscounts.length > 0 ? 36000 : 0;
+    return appliedDiscounts.reduce((sum, coupon) => {
+      if (coupon.discountType === 1) {
+        return sum + (calculateSubtotal() * (coupon?.percentage ?? 0)) / 100;
+      } else {
+        return sum + (coupon?.amount ?? 0);
+      }
+    }, 0);
   };
 
   const calculateShippingDiscount = () => {
     // Example shipping discount
-    return 28000;
+    return 0;
   };
 
   const calculateTotal = () => {
-    return (
+    return Math.max(
+      0,
       calculateSubtotal() +
-      calculateShippingFee() -
-      calculateDiscount() -
-      calculateShippingDiscount()
+        calculateShippingFee() -
+        calculateDiscount() -
+        calculateShippingDiscount()
     );
   };
 
@@ -248,6 +366,7 @@ const CheckoutPage = () => {
         <div className="max-w-6xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-6">
+              {/* Shipping Methods */}
               <Card>
                 <CardHeader className="border-b">
                   <CardTitle>Chọn hình thức giao hàng</CardTitle>
@@ -257,98 +376,252 @@ const CheckoutPage = () => {
                     value={selectedShipping}
                     onValueChange={setSelectedShipping}
                   >
-                    <div className="border rounded-md p-4 mb-4">
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="now" id="now" />
-                        <div className="flex items-center">
-                          <Badge
-                            variant="outline"
-                            className="text-red-500 border-red-500 font-bold mr-2"
-                          >
-                            NOW
+                    {shippingList.map((shipping) => (
+                      <div
+                        key={shipping.id}
+                        className="border rounded-md p-4 mb-4"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem
+                            value={shipping.id.toString()}
+                            id={shipping.id.toString()}
+                          />
+                          <div className="flex items-center flex-1">
+                            {shipping.name.toLowerCase().includes("now") && (
+                              <Badge
+                                variant="outline"
+                                className="text-red-500 border-red-500 font-bold mr-2"
+                              >
+                                NOW
+                              </Badge>
+                            )}
+                            <Label
+                              htmlFor={shipping.id.toString()}
+                              className="font-medium"
+                            >
+                              {shipping.name}
+                            </Label>
+                          </div>
+                          <Badge className="ml-auto bg-green-100 text-green-600 font-normal">
+                            {shipping.price.toLocaleString()}₫
                           </Badge>
-                          <Label htmlFor="now" className="font-medium">
-                            Giao siêu tốc 2h
-                          </Label>
                         </div>
-                        <Badge className="ml-auto bg-green-100 text-green-600 font-normal">
-                          -28K
-                        </Badge>
                       </div>
-                    </div>
-                    <div className="border rounded-md p-4">
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="standard" id="standard" />
-                        <Label htmlFor="standard" className="font-medium">
-                          Giao tiết kiệm
-                        </Label>
-                        <Badge className="ml-auto bg-green-100 text-green-600 font-normal">
-                          -20K
-                        </Badge>
-                      </div>
-                    </div>
+                    ))}
                   </RadioGroup>
                 </CardContent>
               </Card>
 
+              {/* Delivery Address */}
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between border-b">
-                  <CardTitle>Giao tới</CardTitle>
-                  <Button variant="link" className="text-blue-500 p-0">
-                    Thay đổi
-                  </Button>
+                  <CardTitle className="flex items-center">
+                    <MapPin className="h-5 w-5 mr-2" />
+                    Giao tới
+                  </CardTitle>
+                  <Dialog
+                    open={isAddressModalOpen}
+                    onOpenChange={setIsAddressModalOpen}
+                  >
+                    <DialogTrigger asChild>
+                      <Button variant="link" className="text-blue-500 p-0">
+                        Thay đổi
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-2xl bg-white">
+                      <DialogHeader>
+                        <DialogTitle>Chọn địa chỉ giao hàng</DialogTitle>
+                        <DialogDescription>
+                          Chọn địa chỉ bạn muốn nhận hàng
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="max-h-96 overflow-y-auto space-y-3">
+                        {addresses.map((address) => (
+                          <div
+                            key={address.id}
+                            className={`border rounded-lg p-4 cursor-pointer transition-colors ${
+                              selectedAddress?.id === address.id
+                                ? "border-blue-500 bg-blue-50"
+                                : "border-gray-200 hover:border-gray-300"
+                            }`}
+                            onClick={() => handleSelectAddress(address)}
+                          >
+                            <div className="flex justify-between items-start">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <p className="font-medium">
+                                    {address.address}
+                                  </p>
+                                  <p className="text-sm text-muted-foreground">
+                                    {address.phone}
+                                  </p>
+                                  {address.isDefault ? (
+                                    <Badge
+                                      variant="secondary"
+                                      className="text-xs"
+                                    >
+                                      Mặc định
+                                    </Badge>
+                                  ) : undefined}
+                                </div>
+                                <p className="text-sm text-muted-foreground">
+                                  {address.address}, {address.ward},{" "}
+                                  {address.district}, {address.city}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </DialogContent>
+                  </Dialog>
                 </CardHeader>
                 <CardContent className="p-4">
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <p className="font-medium">Đinh Huy</p>
-                      <p>0962212482</p>
+                  {selectedAddress ? (
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <p className="font-medium">{selectedAddress.address}</p>
+                        <p>{selectedAddress.phone}</p>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {selectedAddress.isDefault && (
+                          <span className="bg-green-100 text-green-600 px-1 rounded mr-1">
+                            Mặc định
+                          </span>
+                        )}
+                        {selectedAddress.address}, {selectedAddress.ward},{" "}
+                        {selectedAddress.district}, {selectedAddress.city}
+                      </p>
                     </div>
-                    <p className="text-sm text-muted-foreground">
-                      <span className="bg-green-100 text-green-600 px-1 rounded mr-1">
-                        Nhà
-                      </span>
-                      số nhà 29, Thịnh Quang, Đống Đa, Phường Bến Nghé, Quận 1,
-                      Hồ Chí Minh
+                  ) : (
+                    <p className="text-muted-foreground">
+                      Chưa chọn địa chỉ giao hàng
                     </p>
-                  </div>
+                  )}
                 </CardContent>
               </Card>
 
+              {/* Promotions */}
               <Card>
                 <CardHeader className="border-b">
-                  <CardTitle>Khuyến Mãi</CardTitle>
+                  <CardTitle className="flex items-center">
+                    <Ticket className="h-5 w-5 mr-2" />
+                    Khuyến Mãi
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="p-4">
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="flex-1 border rounded-md p-3 bg-blue-50">
-                      <div className="flex items-center">
-                        <Image
-                          src="/placeholder.svg"
-                          alt="Extra"
-                          width={24}
-                          height={24}
-                        />
-                        <span className="ml-2 text-sm font-medium">
-                          Giảm 70K
-                        </span>
-                        <Info className="h-4 w-4 ml-2 text-muted-foreground" />
-                      </div>
+                  {/* Applied Discounts */}
+                  {appliedDiscounts.length > 0 && (
+                    <div className="space-y-2 mb-4">
+                      {appliedDiscounts.map((coupon) => (
+                        <div
+                          key={coupon.id}
+                          className="flex items-center gap-2"
+                        >
+                          <div className="flex-1 border rounded-md p-3 bg-blue-50">
+                            <div className="flex items-center">
+                              <Ticket className="h-4 w-4 mr-2" />
+                              <span className="text-sm font-medium">
+                                {coupon.couponCode} - Giảm{" "}
+                                {coupon.discountType === 1
+                                  ? `${coupon.percentage ?? 0}%`
+                                  : `${coupon.amount?.toLocaleString()}₫`}
+                              </span>
+                            </div>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleRemoveCoupon(coupon.id ?? 0)}
+                            className="bg-red-500 text-white hover:bg-red-600"
+                          >
+                            Bỏ Chọn
+                          </Button>
+                        </div>
+                      ))}
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="bg-blue-500 text-white hover:bg-blue-600"
-                    >
-                      Bỏ Chọn
-                    </Button>
-                  </div>
+                  )}
 
-                  <div className="flex items-center text-blue-500 text-sm">
-                    <span>Chọn hoặc nhập mã khác</span>
-                    <ChevronRight className="h-4 w-4" />
-                  </div>
+                  {/* Discount Selection */}
+                  <Dialog
+                    open={isDiscountModalOpen}
+                    onOpenChange={setIsDiscountModalOpen}
+                  >
+                    <DialogTrigger asChild>
+                      <div className="flex items-center text-blue-500 text-sm cursor-pointer hover:underline">
+                        <span>Chọn mã giảm giá</span>
+                        <ChevronRight className="h-4 w-4" />
+                      </div>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-2xl bg-white">
+                      <DialogHeader>
+                        <DialogTitle>Chọn mã giảm giá</DialogTitle>
+                        <DialogDescription>
+                          Chọn mã giảm giá phù hợp cho đơn hàng của bạn
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="max-h-96 overflow-y-auto space-y-3">
+                        {discountCouponList.map((coupon) => {
+                          const isApplied = appliedDiscounts.find(
+                            (applied) => applied.id === coupon.id
+                          );
+                          return (
+                            <div
+                              key={coupon.id}
+                              className={`border rounded-lg p-4 ${
+                                isApplied
+                                  ? "border-green-500 bg-green-50"
+                                  : "border-gray-200"
+                              }`}
+                            >
+                              <div className="flex justify-between items-start">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    {isApplied && (
+                                      <Badge className="text-xs bg-green-500">
+                                        Đã áp dụng
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <p className="font-medium text-sm">
+                                    {coupon.couponCode}
+                                  </p>
+                                  <p className="text-sm text-muted-foreground">
+                                    Giảm{" "}
+                                    {coupon.discountType === 1
+                                      ? `${coupon.percentage}%`
+                                      : `${coupon.amount?.toLocaleString()}₫`}
+                                  </p>
+                                  {coupon.description && (
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                      {coupon.description}
+                                    </p>
+                                  )}
+                                </div>
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleApplyCoupon(coupon)}
+                                  disabled={!!isApplied}
+                                  className={
+                                    isApplied ? "bg-green-500" : "text-white"
+                                  }
+                                >
+                                  {isApplied ? "Đã chọn" : "Chọn"}
+                                </Button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                        {discountCouponList.length === 0 && (
+                          <p className="text-center text-muted-foreground py-8">
+                            Không có mã giảm giá khả dụng
+                          </p>
+                        )}
+                      </div>
+                    </DialogContent>
+                  </Dialog>
 
+                  {/* Manual Discount Code Input */}
                   <div className="mt-4">
                     <div className="flex gap-2">
                       <Input
@@ -368,6 +641,7 @@ const CheckoutPage = () => {
                 </CardContent>
               </Card>
 
+              {/* Payment Methods */}
               <Card>
                 <CardHeader className="border-b">
                   <CardTitle>Chọn hình thức thanh toán</CardTitle>
@@ -415,11 +689,53 @@ const CheckoutPage = () => {
                         </div>
                       </div>
                     </div>
+
+                    <div className="border rounded-md p-4 mb-3">
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem
+                          value="vnpayPayment"
+                          id="vnpayPayment"
+                        />
+                        <div className="flex items-center">
+                          <div className="w-8 h-8 rounded-md flex items-center justify-center mr-2">
+                            <Image
+                              src="/img/vnpay.png"
+                              alt="vnpayPayment"
+                              width={20}
+                              height={20}
+                            />
+                          </div>
+                          <Label htmlFor="vnpayPayment" className="font-medium">
+                            Thanh toán bằng VnPay
+                          </Label>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="border rounded-md p-4 mb-3">
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="momoPayment" id="momoPayment" />
+                        <div className="flex items-center">
+                          <div className="w-8 h-8 rounded-md flex items-center justify-center mr-2">
+                            <Image
+                              src="/img/momo.png"
+                              alt="momoPayment"
+                              width={20}
+                              height={20}
+                            />
+                          </div>
+                          <Label htmlFor="momoPayment" className="font-medium">
+                            Thanh toán bằng MoMo
+                          </Label>
+                        </div>
+                      </div>
+                    </div>
                   </RadioGroup>
                 </CardContent>
               </Card>
             </div>
 
+            {/* Order Summary */}
             <div className="lg:col-span-1 space-y-6">
               <Card>
                 <CardHeader className="border-b">
@@ -435,31 +751,40 @@ const CheckoutPage = () => {
                   </div>
                 </CardHeader>
                 <CardContent className="p-4">
-                  <p className="text-sm text-muted-foreground mb-4">
-                    1 sản phẩm
-                  </p>
-
                   <div className="space-y-4">
-                    <div className="flex items-start">
-                      <div className="w-12 h-12 relative flex-shrink-0">
-                        <Image
-                          src="/placeholder.svg"
-                          alt="Thảm tập yoga"
-                          fill
-                          className="object-contain"
-                        />
-                      </div>
-                      <div className="ml-3 flex-1">
-                        <p className="text-sm line-clamp-2">
-                          Thảm Tập Yoga TPE 2 Lớp PEAFLO Cao Cấp dày 6mm Kèm Túi
-                          - Màu ngẫu nhiên
-                        </p>
-                        <div className="flex justify-between mt-1">
-                          <span className="text-sm">SL: x1</span>
-                          <span className="text-sm font-medium">129.000₫</span>
+                    {cartItems.map((item) => (
+                      <div key={item.id} className="flex items-start">
+                        <div className="w-12 h-12 relative flex-shrink-0">
+                          <Image
+                            src={
+                              item.serviceDetail?.sImage || "/placeholder.svg"
+                            }
+                            alt={item.serviceDetail?.productTitle || "Sản phẩm"}
+                            fill
+                            className="object-contain rounded"
+                          />
+                        </div>
+                        <div className="ml-3 flex-1">
+                          <p className="text-sm font-medium">
+                            {item.serviceDetail?.productTitle}
+                          </p>
+                          <p className="text-sm text-muted-foreground line-clamp-2">
+                            {item.serviceDetail?.productDesc}
+                          </p>
+                          <div className="flex justify-between mt-1">
+                            <span className="text-sm">
+                              SL: x{item.quantity}
+                            </span>
+                            <span className="text-sm font-medium">
+                              {(
+                                item.serviceDetail?.price || 0
+                              ).toLocaleString()}
+                              ₫
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    ))}
                   </div>
                 </CardContent>
               </Card>
@@ -478,10 +803,20 @@ const CheckoutPage = () => {
                       <span className="text-sm">Phí vận chuyển</span>
                       <span>{calculateShippingFee().toLocaleString()}₫</span>
                     </div>
-                    <div className="flex justify-between text-green-600">
-                      <span className="text-sm">Giảm giá trực tiếp</span>
-                      <span>-{calculateDiscount().toLocaleString()}₫</span>
-                    </div>
+                    {calculateDiscount() > 0 && (
+                      <div className="flex justify-between text-green-600">
+                        <span className="text-sm">Giảm giá</span>
+                        <span>-{calculateDiscount().toLocaleString()}₫</span>
+                      </div>
+                    )}
+                    {calculateShippingDiscount() > 0 && (
+                      <div className="flex justify-between text-green-600">
+                        <span className="text-sm">Giảm phí vận chuyển</span>
+                        <span>
+                          -{calculateShippingDiscount().toLocaleString()}₫
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   <Separator className="my-4" />
@@ -492,6 +827,7 @@ const CheckoutPage = () => {
                       {calculateTotal().toLocaleString()}₫
                     </span>
                   </div>
+
                   {selectedPayment === "paypalPayment" ? (
                     <PayPalScriptProvider options={initialOptions}>
                       <PayPalButtons
@@ -501,6 +837,20 @@ const CheckoutPage = () => {
                         fundingSource="paypal"
                       />
                     </PayPalScriptProvider>
+                  ) : selectedPayment === "vnpayPayment" ? (
+                    <Button
+                      className="w-full bg-red-500 hover:bg-red-600 text-white"
+                      onClick={handleCheckout}
+                    >
+                      Thanh toán bằng VnPay
+                    </Button>
+                  ) : selectedPayment === "momoPayment" ? (
+                    <Button
+                      className="w-full bg-red-500 hover:bg-red-600 text-white"
+                      onClick={handleMomoCheckout}
+                    >
+                      Thanh toán bằng MoMo
+                    </Button>
                   ) : (
                     <Button className="w-full bg-red-500 hover:bg-red-600 text-white">
                       Đặt hàng

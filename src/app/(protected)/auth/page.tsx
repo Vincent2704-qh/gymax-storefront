@@ -21,23 +21,26 @@ export default function AuthenticationPage() {
       className="min-h-screen bg-cover bg-center bg-no-repeat relative"
       style={{ backgroundImage: "url(/img/hero/bg.png)" }}
     >
-      {/* Overlay để làm tối background */}
+      {/* Lớp phủ làm tối nền */}
       <div className="absolute inset-0 bg-black/60"></div>
       <div className="relative z-10">
-        {/* Header */}
+        {/* Tiêu đề */}
         <div className="flex items-center justify-between p-6">
-          <div className="flex items-center gap-2 text-white">
+          <div
+            className="flex items-center gap-2 text-white"
+            onClick={() => router.push("/")}
+          >
             <Dumbbell className="h-8 w-8 text-red-500" />
             <span className="text-xl font-bold">GymMax</span>
           </div>
           <div className="text-red-400 hover:text-red-300 cursor-pointer">
-            Need help?
+            Cần trợ giúp?
           </div>
         </div>
 
-        {/* Main Content */}
+        {/* Nội dung chính */}
         <div className="flex min-h-[calc(100vh-88px)]">
-          {/* Left Side - Branding */}
+          {/* Bên trái - Thương hiệu */}
           <div className="flex-1 flex flex-col items-center justify-center p-12 text-white">
             <div className="text-center max-w-md">
               <div className="mb-8">
@@ -45,15 +48,15 @@ export default function AuthenticationPage() {
                 <div className="text-4xl font-bold mb-2">GymMax</div>
               </div>
               <h1 className="text-2xl font-semibold mb-4">
-                Leading Fitness Platform
+                Nền tảng thể hình hàng đầu
               </h1>
               <p className="text-lg text-zinc-300">
-                Build Strong Body & Resilient Mind
+                Xây dựng cơ thể khỏe mạnh & tinh thần kiên cường
               </p>
             </div>
           </div>
 
-          {/* Right Side - Auth Form */}
+          {/* Bên phải - Biểu mẫu đăng nhập/đăng ký */}
           <div className="w-[500px] bg-white p-8 shadow-2xl mr-8 my-8 rounded-lg">
             {isLogin ? (
               <LoginForm onSwitchToSignup={() => setIsLogin(false)} />

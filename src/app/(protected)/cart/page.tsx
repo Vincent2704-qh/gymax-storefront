@@ -276,11 +276,13 @@ const CartPage = () => {
                                     className="object-contain rounded-md"
                                   />
                                 </div>
-                                <div className="flex flex-col">
-                                  <h3 className="font-medium line-clamp-2">
-                                    {item.serviceDetail?.productTitle}
-                                  </h3>
-                                  <p className="text-sm text-muted-foreground mt-1">
+                                <div className="flex flex-col w-full max-w-[400px]">
+                                  {" "}
+                                  {/* hoặc width bằng tiêu đề */}
+                                  <h2 className="text-md font-semibold">
+                                    {item.serviceDetail.productTitle}
+                                  </h2>
+                                  <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
                                     {item.serviceDetail?.productDesc}
                                   </p>
                                 </div>

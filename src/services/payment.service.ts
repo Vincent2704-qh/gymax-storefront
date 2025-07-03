@@ -22,6 +22,19 @@ export interface PaymentBackendResponse {
   error?: string;
 }
 
+export interface CreatePaymentDto {
+  amount: number;
+  orderInfo: any;
+}
+
+export interface PaymentResponse {
+  url: string;
+}
+
+export interface PaymentMomoResponse {
+  payUrl: string;
+}
+
 export const PaymentService = {
   onCreateOrder() {
     return axiosClient.post<PaymentBackendResponse>(
@@ -33,5 +46,27 @@ export const PaymentService = {
   appprovePayment(paymentId: string) {
     // string thay vì number
     return axiosClient.get(`api/payment/approve-payment/${paymentId}`);
+  },
+
+  paymentOrders(payment: CreatePaymentDto) {
+    return axiosClient.post<PaymentResponse>(
+      `api/payment/create-payment-url`,
+      payment
+    );
+  },
+
+  verifyCheckout(payment: any) {
+    return axiosClient.post(`api/payment/verify-checkout`, payment);
+  },
+
+  momoPayment() {
+    return axiosClient.post<PaymentMomoResponse>(
+      `api/payment/momo-payment`,
+      {}
+    );
+  },
+
+  momoCallback() {
+    return axiosClient.post(`api/payment/momo-callback`, {});
   },
 };
