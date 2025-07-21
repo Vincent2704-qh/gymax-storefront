@@ -4,7 +4,6 @@ import { useState, useMemo, useEffect } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
   Minus,
   Plus,
@@ -12,10 +11,23 @@ import {
   Truck,
   Shield,
   RotateCcw,
+  Calendar,
 } from "lucide-react";
 import type { ServiceDto } from "@/types/service-type";
 import { toast } from "sonner";
-import { Brand } from "@/types/app-type.type";
+import type { Brand } from "@/types/app-type.type";
+import { useRouter } from "next/navigation";
+import { getItem } from "@/lib/utils";
+import {
+  CookieStorageEnum,
+  LocalStorageEnum,
+  ServiceType,
+  ServiceBookingTypeEnum,
+} from "@/enum/app.enums";
+import Cookies from "js-cookie";
+import { CartService } from "@/services/cart.service";
+import BookingWidget from "./widget/BookingWidget";
+import BundleOption from "./widget/BundleOption";
 
 interface Props {
   service: ServiceDto;
@@ -27,25 +39,26 @@ const ServiceDetailContent = ({ service, serviceBrand }: Props) => {
   const [selectedVariantId, setSelectedVariantId] = useState<number>(
     service.variants?.[0]?.id || 0
   );
+  const router = useRouter();
   const [selectedSizeId, setSelectedSizeId] = useState<number | null>(null);
   const [quantity, setQuantity] = useState(1);
+  const [isOpenBookingModal, setIsOpenBookingModal] = useState(false);
+  const [isOpenOptionModal, setIsOpenOptionModal] = useState(false);
+  const [customerId, setCustomerId] = useState<number>();
 
   // Get all images from service and variants
   const images = useMemo(() => {
     const imageList: string[] = [];
-
     // Add main service image
     if (service.sImage) {
       imageList.push(service.sImage);
     }
-
     // Add variant images
     service?.variants?.forEach((variant) => {
       if (variant.sImage && variant.sImage !== service.sImage) {
         imageList.push(variant.sImage);
       }
     });
-
     return imageList.length > 0
       ? imageList
       : ["/placeholder.svg?height=600&width=600"];
@@ -81,6 +94,12 @@ const ServiceDetailContent = ({ service, serviceBrand }: Props) => {
     }
   }, [availableSizes, selectedSizeId]);
 
+  useEffect(() => {
+    const userInfoStr = getItem(LocalStorageEnum.UserInfo);
+    const userInfo = userInfoStr ? JSON.parse(userInfoStr) : null;
+    setCustomerId(userInfo?.id);
+  }, []);
+
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("vi-VN").format(price);
   };
@@ -100,28 +119,96 @@ const ServiceDetailContent = ({ service, serviceBrand }: Props) => {
     }
   };
 
-  const handleAddToCart = () => {
-    if (!selectedVariant) {
-      toast.error("Vui lòng chọn phiên bản sản phẩm");
-      return;
+  const handleAddToCart = async () => {
+    // Validation cho product type
+    if (service.productType === ServiceType.Product) {
+      if (selectedVariant && !selectedVariant) {
+        toast.error("Vui lòng chọn phiên bản sản phẩm");
+        return;
+      }
+      if (availableSizes.length > 0 && !selectedSize) {
+        toast.error("Vui lòng chọn kích thước");
+        return;
+      }
     }
-    if (availableSizes.length > 0 && !selectedSize) {
-      toast.error("Vui lòng chọn kích thước");
-      return;
+
+    const userInfoStr = getItem(LocalStorageEnum.UserInfo);
+    const accessToken = Cookies.get(CookieStorageEnum.AccessToken);
+    const userInfo = userInfoStr ? JSON.parse(userInfoStr) : null;
+    const userId = userInfo?.id;
+
+    if (!userInfoStr || !accessToken) {
+      return router.push("/auth");
     }
-    toast.success("Đã thêm vào giỏ hàng!");
+
+    try {
+      await CartService.addItemToCart({
+        customerId: userId,
+        items: [
+          {
+            serviceId: service.id ?? 0,
+            serviceVariantId: selectedVariant?.id,
+            serviceSizeId: selectedSize?.id,
+            quantity,
+            selected: 0,
+          },
+        ],
+      });
+      toast.success("Đã thêm vào giỏ hàng!");
+    } catch (err) {
+      toast.error("Thêm vào giỏ hàng thất bại!");
+    }
   };
 
-  const handleBuyNow = () => {
-    if (!selectedVariant) {
-      toast.error("Vui lòng chọn phiên bản sản phẩm");
-      return;
+  const handleBuyNow = async () => {
+    // Validation cho product type
+    if (service.productType === ServiceType.Product) {
+      if (selectedVariant && !selectedVariant) {
+        toast.error("Vui lòng chọn phiên bản sản phẩm");
+        return;
+      }
+      if (availableSizes.length > 0 && !selectedSize) {
+        toast.error("Vui lòng chọn kích thước");
+        return;
+      }
     }
-    if (availableSizes.length > 0 && !selectedSize) {
-      toast.error("Vui lòng chọn kích thước");
-      return;
+
+    // Lấy thông tin user
+    const userInfoStr = getItem(LocalStorageEnum.UserInfo);
+    const accessToken = Cookies.get(CookieStorageEnum.AccessToken);
+    const userInfo = userInfoStr ? JSON.parse(userInfoStr) : null;
+    const userId = userInfo?.id;
+
+    if (!userInfoStr || !accessToken) {
+      return router.push("/auth");
     }
-    toast.success("Chuyển đến trang thanh toán!");
+
+    try {
+      await CartService.addItemToCart({
+        customerId: userId,
+        items: [
+          {
+            serviceId: service.id ?? 0,
+            serviceVariantId: selectedVariant?.id,
+            serviceSizeId: selectedSize?.id,
+            quantity,
+            selected: 1, // Set selected = 1 cho mua ngay
+          },
+        ],
+      });
+      toast.success("Chuyển đến trang thanh toán!");
+      router.push("/checkout");
+    } catch (err) {
+      toast.error("Thêm vào giỏ hàng thất bại!");
+    }
+  };
+
+  const handleOpenBookingWidget = () => {
+    if (service.bookingTypeId === ServiceBookingTypeEnum.Bundle) {
+      setIsOpenOptionModal(true);
+    } else if (service.bookingTypeId === ServiceBookingTypeEnum.Regular) {
+      setIsOpenBookingModal(true);
+    }
   };
 
   return (
@@ -139,7 +226,6 @@ const ServiceDetailContent = ({ service, serviceBrand }: Props) => {
               className="w-full h-full object-cover"
             />
           </div>
-
           {/* Thumbnail Images */}
           <div className="flex space-x-2 overflow-x-auto">
             {images.map((image, index) => (
@@ -193,150 +279,196 @@ const ServiceDetailContent = ({ service, serviceBrand }: Props) => {
             )}
           </div>
 
-          {/* Variant Selection */}
-          {(service.variants?.length ?? 0) > 0 && (
-            <div className="space-y-3">
-              <div className="flex items-center space-x-2">
-                <span className="font-medium">Phiên bản:</span>
-                <span className="text-gray-600">{selectedVariant?.title}</span>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {service.variants?.map((variant) => (
-                  <button
-                    key={variant.id}
-                    onClick={() => handleVariantChange(variant.id!)}
-                    className={`px-4 py-2 border rounded-md transition-colors ${
-                      selectedVariantId === variant.id
-                        ? "border-blue-500 bg-blue-50 text-blue-600"
-                        : "border-gray-300 hover:border-gray-400"
-                    }`}
-                  >
-                    {variant.title}
-                    {variant.price > 0 && (
-                      <span className="ml-1 text-xs text-gray-500">
-                        (+₫{formatPrice(variant.price)})
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Size Selection */}
-          {availableSizes.length > 0 && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="font-medium">
-                  Kích thước: {selectedSize?.size || "Chưa chọn"}
-                </span>
-                <button className="text-sm text-blue-600 hover:underline">
-                  Hướng dẫn chọn size
-                </button>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {availableSizes.map((size) => (
-                  <button
-                    key={size.id}
-                    onClick={() => setSelectedSizeId(size.id!)}
-                    disabled={size.quantity === 0}
-                    className={`px-4 py-2 border rounded-md transition-colors ${
-                      selectedSizeId === size.id
-                        ? "border-blue-500 bg-blue-50 text-blue-600"
-                        : size.quantity === 0
-                        ? "border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed"
-                        : "border-gray-300 hover:border-gray-400"
-                    }`}
-                  >
-                    {size.size}
-                    <span className="ml-1 text-xs text-gray-500">
-                      {size.quantity === 0
-                        ? "Hết hàng"
-                        : `${size.quantity} có sẵn`}
+          {/* Chỉ hiển thị variant và size selection cho product type */}
+          {service.productType === ServiceType.Product && (
+            <>
+              {/* Variant Selection */}
+              {(service.variants?.length ?? 0) > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-2">
+                    <span className="font-medium">Phiên bản:</span>
+                    <span className="text-gray-600">
+                      {selectedVariant?.title}
                     </span>
-                  </button>
-                ))}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {service.variants?.map((variant) => (
+                      <button
+                        key={variant.id}
+                        onClick={() => handleVariantChange(variant.id!)}
+                        className={`px-4 py-2 border rounded-md transition-colors ${
+                          selectedVariantId === variant.id
+                            ? "border-blue-500 bg-blue-50 text-blue-600"
+                            : "border-gray-300 hover:border-gray-400"
+                        }`}
+                      >
+                        {variant.title}
+                        {variant.price > 0 && (
+                          <span className="ml-1 text-xs text-gray-500">
+                            (+₫{formatPrice(variant.price)})
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Size Selection */}
+              {availableSizes.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium">
+                      Kích thước: {selectedSize?.size || "Chưa chọn"}
+                    </span>
+                    <button className="text-sm text-blue-600 hover:underline">
+                      Hướng dẫn chọn size
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {availableSizes.map((size) => (
+                      <button
+                        key={size.id}
+                        onClick={() => setSelectedSizeId(size.id!)}
+                        disabled={size.quantity === 0}
+                        className={`px-4 py-2 border rounded-md transition-colors ${
+                          selectedSizeId === size.id
+                            ? "border-blue-500 bg-blue-50 text-blue-600"
+                            : size.quantity === 0
+                            ? "border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed"
+                            : "border-gray-300 hover:border-gray-400"
+                        }`}
+                      >
+                        {size.size}
+                        <span className="ml-1 text-xs text-gray-500">
+                          {size.quantity === 0
+                            ? "Hết hàng"
+                            : `${size.quantity} có sẵn`}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Stock Info */}
+              <div className="text-sm text-gray-600">
+                <span>Tồn kho: </span>
+                <span className="font-medium">
+                  {selectedSize
+                    ? selectedSize.quantity
+                    : selectedVariant?.quantity ||
+                      service.inventoryQuantity}{" "}
+                  sản phẩm
+                </span>
+              </div>
+
+              {/* Quantity and Actions */}
+              <div className="space-y-4">
+                <div className="flex items-center space-x-4">
+                  <span className="font-medium">Số lượng:</span>
+                  <div className="flex items-center border rounded-md">
+                    <button
+                      onClick={() => handleQuantityChange(-1)}
+                      className="p-2 hover:bg-gray-100 transition-colors"
+                      disabled={quantity <= 1}
+                    >
+                      <Minus className="w-4 h-4" />
+                    </button>
+                    <span className="px-4 py-2 min-w-[60px] text-center">
+                      {quantity}
+                    </span>
+                    <button
+                      onClick={() => handleQuantityChange(1)}
+                      className="p-2 hover:bg-gray-100 transition-colors"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Action Buttons cho Product Type */}
+                <div className="space-y-3">
+                  <Button
+                    onClick={handleAddToCart}
+                    variant="outline"
+                    size="lg"
+                    className="w-full border-2 border-gray-300 hover:border-gray-400 hover:text-white bg-transparent"
+                  >
+                    <ShoppingCart className="w-5 h-5 mr-2" />
+                    THÊM VÀO GIỎ
+                  </Button>
+                  <Button
+                    onClick={handleBuyNow}
+                    size="lg"
+                    className="w-full bg-black hover:bg-gray-800 text-white"
+                  >
+                    MUA NGAY
+                  </Button>
+                </div>
+
+                {/* Contact Info */}
+                <div className="text-center text-sm text-gray-600">
+                  Gọi đặt mua{" "}
+                  <span className="font-bold text-orange-500">
+                    0375.321.910
+                  </span>{" "}
+                  (9:00 - 22:30)
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Action Buttons cho Workout Type */}
+          {service.productType === ServiceType.Workout && (
+            <div className="space-y-4">
+              <div className="text-center">
+                <Button
+                  onClick={handleOpenBookingWidget}
+                  size="lg"
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  <Calendar className="w-5 h-5 mr-2" />
+                  {service.bookingTypeId === ServiceBookingTypeEnum.Bundle
+                    ? "QUẢN LÍ GÓI TẬP"
+                    : "ĐẶT LỊCH TẬP"}
+                </Button>
+              </div>
+
+              {/* Contact Info */}
+              <div className="text-center text-sm text-gray-600">
+                Liên hệ tư vấn{" "}
+                <span className="font-bold text-orange-500">0375.321.910</span>{" "}
+                (9:00 - 22:30)
               </div>
             </div>
           )}
-
-          {/* Stock Info */}
-          <div className="text-sm text-gray-600">
-            <span>Tồn kho: </span>
-            <span className="font-medium">
-              {selectedSize
-                ? selectedSize.quantity
-                : selectedVariant?.quantity || service.inventoryQuantity}{" "}
-              sản phẩm
-            </span>
-          </div>
-
-          {/* Quantity and Actions */}
-          <div className="space-y-4">
-            <div className="flex items-center space-x-4">
-              <span className="font-medium">Số lượng:</span>
-              <div className="flex items-center border rounded-md">
-                <button
-                  onClick={() => handleQuantityChange(-1)}
-                  className="p-2 hover:bg-gray-100 transition-colors"
-                  disabled={quantity <= 1}
-                >
-                  <Minus className="w-4 h-4" />
-                </button>
-                <span className="px-4 py-2 min-w-[60px] text-center">
-                  {quantity}
-                </span>
-                <button
-                  onClick={() => handleQuantityChange(1)}
-                  className="p-2 hover:bg-gray-100 transition-colors"
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="space-y-3">
-              <Button
-                onClick={handleAddToCart}
-                variant="outline"
-                size="lg"
-                className="w-full border-2 border-gray-300 hover:border-gray-400 hover:text-white"
-              >
-                <ShoppingCart className="w-5 h-5 mr-2" />
-                THÊM VÀO GIỎ
-              </Button>
-
-              <Button
-                onClick={handleBuyNow}
-                size="lg"
-                className="w-full bg-black hover:bg-gray-800 text-white"
-              >
-                MUA NGAY
-              </Button>
-            </div>
-
-            {/* Contact Info */}
-            <div className="text-center text-sm text-gray-600">
-              Gọi đặt mua{" "}
-              <span className="font-bold text-orange-500">0375.321.910</span>{" "}
-              (9:00 - 22:30)
-            </div>
-          </div>
 
           {/* Features */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t">
             <div className="flex items-center space-x-2 text-sm">
               <Truck className="w-5 h-5 text-gray-600" />
-              <span>Giao hàng tận nơi</span>
+              <span>
+                {service.productType === ServiceType.Product
+                  ? "Giao hàng tận nơi"
+                  : "Hỗ trợ 24/7"}
+              </span>
             </div>
             <div className="flex items-center space-x-2 text-sm">
               <Shield className="w-5 h-5 text-gray-600" />
-              <span>Sản phẩm chính hãng</span>
+              <span>
+                {service.productType === ServiceType.Product
+                  ? "Sản phẩm chính hãng"
+                  : "Huấn luyện viên chuyên nghiệp"}
+              </span>
             </div>
             <div className="flex items-center space-x-2 text-sm">
               <RotateCcw className="w-5 h-5 text-gray-600" />
-              <span>Đổi trả trong vòng 7 ngày</span>
+              <span>
+                {service.productType === ServiceType.Product
+                  ? "Đổi trả trong vòng 7 ngày"
+                  : "Linh hoạt thời gian"}
+              </span>
             </div>
           </div>
         </div>
@@ -346,8 +478,11 @@ const ServiceDetailContent = ({ service, serviceBrand }: Props) => {
       <div className="mt-12">
         <Card>
           <CardContent className="p-6">
-            <h2 className="text-xl font-bold mb-4">Mô tả sản phẩm</h2>
-
+            <h2 className="text-xl font-bold mb-4">
+              {service.productType === ServiceType.Product
+                ? "Mô tả sản phẩm"
+                : "Mô tả dịch vụ"}
+            </h2>
             <div
               className="prose prose-sm max-w-none text-gray-700"
               dangerouslySetInnerHTML={{
@@ -357,6 +492,20 @@ const ServiceDetailContent = ({ service, serviceBrand }: Props) => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Booking Widgets cho Workout */}
+      <BookingWidget
+        isOpen={isOpenBookingModal}
+        onClose={() => setIsOpenBookingModal(false)}
+        serviceId={service.id ?? 0}
+        customerId={customerId}
+      />
+      <BundleOption
+        isOpen={isOpenOptionModal}
+        onClose={() => setIsOpenOptionModal(false)}
+        serviceId={service.id ?? 0}
+        customerId={customerId}
+      />
     </div>
   );
 };

@@ -1,7 +1,5 @@
 "use client";
-
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import React, { useCallback, useState } from "react";
+import { useCallback, useState } from "react";
 import { useServiceList } from "./hooks/useServiceList";
 import ServiceItem from "./components/ServiceItem";
 import { PaginationTable } from "@/components/pagination-table";
@@ -23,6 +21,8 @@ import {
 import { WishlistService } from "@/services/wishlist.service";
 import { toast } from "sonner";
 import { CartService } from "@/services/cart.service";
+import { useSupplierList } from "./hooks/useSuppList";
+import SupplierFilter from "./components/SupplierFilter";
 
 const ShopPage = () => {
   const {
@@ -33,6 +33,7 @@ const ShopPage = () => {
     onChangePage,
     onChangeSearch,
     redirectToServiceDetail,
+    updateFilters,
   } = useServiceList({
     filter: {
       limit: 12,
@@ -42,17 +43,25 @@ const ShopPage = () => {
   const router = useRouter();
   const { brandList } = useBrandList({});
   const { categoryList } = useCategoryList({});
+  const { supplierList } = useSupplierList({});
+
   const [selectedCategories, setSelectedCategories] = useState<number[]>([]);
   const [selectedBrands, setSelectedBrands] = useState<number[]>([]);
+  const [selectedSuppliers, setSelectedSuppliers] = useState<number[]>([]);
+
+  const handleSupplierChange = (supplierIds: number[]) => {
+    setSelectedSuppliers(supplierIds);
+    updateFilters({ supplierId: supplierIds, page: 1 }); // <-- truyền lên filter
+  };
 
   const handleCategoryChange = (categoryIds: number[]) => {
     setSelectedCategories(categoryIds);
-    onChangePage(1);
+    updateFilters({ categoryId: categoryIds, page: 1 }); // <-- truyền lên filter
   };
 
   const handleBrandChange = (brandIds: number[]) => {
     setSelectedBrands(brandIds);
-    onChangePage(1);
+    updateFilters({ brandId: brandIds, page: 1 }); // <-- truyền lên filter
   };
 
   const handleAddToWishlist = useCallback(async (serviceId: number) => {
@@ -76,6 +85,7 @@ const ShopPage = () => {
     }
   }, []);
 
+  // Cập nhật logic handleAddToCart - chỉ dành cho product type = 1 không có variant
   const handleAddToCart = useCallback(async (serviceId: number) => {
     const userInfoStr = getItem(LocalStorageEnum.UserInfo);
     const accessToken = Cookies.get(CookieStorageEnum.AccessToken);
@@ -93,7 +103,7 @@ const ShopPage = () => {
           {
             serviceId,
             quantity: 1,
-            selected: 0, // Mặc định chọn
+            selected: 0,
           },
         ],
       });
@@ -103,16 +113,22 @@ const ShopPage = () => {
     }
   }, []);
 
-  const handleBuyNow = useCallback((serviceId: number) => {
-    const userInfo = getItem(LocalStorageEnum.UserInfo);
-    const accessToken = Cookies.get(CookieStorageEnum.AccessToken);
-
-    if (!userInfo || !accessToken) {
-      return router.push("/auth");
-    }
-
-    router.push(`/checkout`);
-  }, []);
+  // Logic xử lý click vào service item
+  const handleServiceItemClick = useCallback(
+    (item: any) => {
+      // Nếu là product type = 1 và không có variants thì add to cart
+      if (
+        item.productType === ServiceType.Product &&
+        (!item.variants || item.variants.length === 0)
+      ) {
+        handleAddToCart(item.id);
+      } else {
+        // Nếu có variants hoặc là workout type = 2 thì redirect đến detail
+        redirectToServiceDetail(item.id);
+      }
+    },
+    [handleAddToCart, redirectToServiceDetail]
+  );
 
   return (
     <div className="container mx-auto px-4 py-6 pt-[140px]">
@@ -129,6 +145,11 @@ const ShopPage = () => {
             selectedBrands={selectedBrands}
             onBrandChange={handleBrandChange}
           />
+          <SupplierFilter
+            supplierList={supplierList.filter((s) => typeof s.id === "number")}
+            selectedSuppliers={selectedSuppliers}
+            onSupplierChange={handleSupplierChange}
+          />
         </div>
 
         {/* Main Content */}
@@ -139,9 +160,8 @@ const ShopPage = () => {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
                 placeholder="Tìm kiếm theo tên dịch vụ"
-                // value={searchTerm}
-                // onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
+                onChange={(e) => onChangeSearch(e.target.value)}
               />
             </div>
           </div>
@@ -161,10 +181,9 @@ const ShopPage = () => {
                 bookingTypeId={
                   item.bookingTypeId ?? ServiceBookingTypeEnum.Regular
                 }
-                redirectToDetail={() => redirectToServiceDetail(item.id!)}
+                hasVariants={item.variants && item.variants.length > 0}
+                onItemClick={() => handleServiceItemClick(item)}
                 onAddToWishlist={() => handleAddToWishlist(item.id!)}
-                onAddToCart={() => handleAddToCart(item.id!)}
-                onBuyNow={() => handleBuyNow(item.id!)}
               />
             ))}
           </div>

@@ -1,7 +1,9 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Heart, ShoppingCart, Eye } from "lucide-react";
-import React, { useCallback, useEffect, useState } from "react";
+import { Heart } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import {
   LocalStorageEnum,
@@ -21,10 +23,9 @@ interface Props {
   currencyCode: string;
   productType: ServiceType;
   bookingTypeId: number;
-  redirectToDetail: () => void;
+  hasVariants?: boolean;
+  onItemClick: () => void;
   onAddToWishlist: (serviceId: number) => void;
-  onAddToCart: (serviceId: number) => void;
-  onBuyNow: (serviceId: number) => void;
 }
 
 const ServiceItem = ({
@@ -33,38 +34,28 @@ const ServiceItem = ({
   sTitle,
   sDescription,
   price,
-  currencyCode,
   productType,
   bookingTypeId,
-  redirectToDetail,
+  hasVariants = false,
+  onItemClick,
   onAddToWishlist,
-  onAddToCart,
-  onBuyNow,
 }: Props) => {
   const [isHovered, setIsHovered] = useState(false);
   const [isWishlisted, setIsWishlisted] = useState(false);
-  const [isOpenBookingModal, setIsOpenBookingModal] = useState(false);
-  const [isOpenOptionModal, setIsOpenOptionModal] = useState(false);
-
-  const [customerId, setCustomerId] = useState<number>();
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("vi-VN").format(price);
   };
 
-  useEffect(() => {
-    const userInfoStr = getItem(LocalStorageEnum.UserInfo);
-    const userInfo = userInfoStr ? JSON.parse(userInfoStr) : null;
-    setCustomerId(userInfo?.id);
-  }, []);
-
-  const handleOpenBookingWidget = useCallback((bookingTypeId: number) => {
-    if (bookingTypeId === ServiceBookingTypeEnum.Bundle) {
-      setIsOpenOptionModal(true);
-    } else if (bookingTypeId === ServiceBookingTypeEnum.Regular) {
-      setIsOpenBookingModal(true);
+  // Xác định hành động khi click vào card
+  const getClickAction = () => {
+    if (productType === ServiceType.Product && !hasVariants) {
+      return "add-to-cart";
     }
-  }, []);
+    return "view-detail";
+  };
+
+  const clickAction = getClickAction();
 
   return (
     <Card
@@ -72,7 +63,7 @@ const ServiceItem = ({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <CardContent className="p-0" onClick={redirectToDetail}>
+      <CardContent className="p-0" onClick={onItemClick}>
         <div className="relative overflow-hidden">
           <Image
             src={sImgUrl || "/placeholder.svg"}
@@ -82,13 +73,13 @@ const ServiceItem = ({
             className="w-full h-64 object-cover transition-transform duration-300 group-hover:scale-105"
           />
 
-          {/* Hover Overlay */}
+          {/* Hover Overlay - chỉ hiển thị wishlist button */}
           <div
             className={`absolute inset-0 bg-black bg-opacity-40 transition-opacity duration-300 ${
               isHovered ? "opacity-100" : "opacity-0"
             }`}
           >
-            <div className="absolute inset-0 flex items-center justify-center space-x-3">
+            <div className="absolute top-4 right-4">
               <Button
                 size="icon"
                 variant="secondary"
@@ -105,21 +96,19 @@ const ServiceItem = ({
                   }`}
                 />
               </Button>
-              <Button
-                size="icon"
-                onClick={(e) => {
-                  e.stopPropagation();
+            </div>
 
-                  onAddToCart(id);
-                }}
-                className="bg-white hover:bg-gray-100"
-              >
-                <ShoppingCart className="h-5 w-5 text-blue-600" />
-              </Button>
+            {/* Hiển thị action hint */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="bg-white bg-opacity-90 px-4 py-2 rounded-lg">
+                <span className="text-sm font-medium text-gray-800">
+                  {clickAction === "add-to-cart"
+                    ? "Thêm vào giỏ hàng"
+                    : "Xem chi tiết"}
+                </span>
+              </div>
             </div>
           </div>
-
-          {/* Wishlist Button - Always visible on mobile */}
         </div>
 
         <div className="p-4">
@@ -133,47 +122,20 @@ const ServiceItem = ({
             <span className="font-bold text-lg text-red-600">
               ₫{formatPrice(price)}
             </span>
-            {productType === ServiceType.Product ? (
-              <Button
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onBuyNow(id);
-                }}
-                className="text-sm text-white bg-blue-600 hover:bg-blue-700"
-              >
-                Mua ngay
-              </Button>
-            ) : productType === ServiceType.Workout ? (
-              <Button
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleOpenBookingWidget(bookingTypeId);
-                }}
-                className="text-sm text-white bg-blue-600 hover:bg-blue-700"
-              >
-                {bookingTypeId === ServiceBookingTypeEnum.Bundle
-                  ? "Quản lí gói tập"
-                  : "Đặt lịch tập"}
-              </Button>
-            ) : undefined}
+
+            {/* Chỉ hiển thị button đặt lịch cho workout type trong danh sách */}
           </div>
+
+          {/* Hiển thị indicator cho product có variants */}
+          {productType === ServiceType.Product && hasVariants && (
+            <div className="mt-2">
+              <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                Nhiều lựa chọn
+              </span>
+            </div>
+          )}
         </div>
       </CardContent>
-      <BookingWidget
-        isOpen={isOpenBookingModal}
-        onClose={() => setIsOpenBookingModal(false)}
-        serviceId={id}
-        customerId={customerId}
-      />
-
-      <BundleOption
-        isOpen={isOpenOptionModal}
-        onClose={() => setIsOpenOptionModal(false)}
-        serviceId={id}
-        customerId={customerId}
-      />
     </Card>
   );
 };

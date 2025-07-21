@@ -14,7 +14,6 @@ export interface PaypalResponse {
   }>;
 }
 
-// Interface cho backend wrapper response
 export interface PaymentBackendResponse {
   success: boolean;
   data: PaypalResponse;
@@ -35,17 +34,41 @@ export interface PaymentMomoResponse {
   payUrl: string;
 }
 
+export interface MoMoOrderDto {
+  amount?: number;
+  orderInfo?: string;
+}
+
+export interface PaypalPaymentResponse {
+  data: {
+    status: string;
+  };
+}
+
+export interface VnpayResponse {
+  checked: boolean;
+  orderInfo: any;
+}
+
+export interface MomoResponse {
+  momoData: {
+    resultCode: number;
+  };
+}
+
 export const PaymentService = {
-  onCreateOrder() {
+  onCreateOrder(payload: any) {
     return axiosClient.post<PaymentBackendResponse>(
       `api/payment/capture-payment`,
-      {}
+      payload
     );
   },
 
   appprovePayment(paymentId: string) {
     // string thay vì number
-    return axiosClient.get(`api/payment/approve-payment/${paymentId}`);
+    return axiosClient.get<PaypalPaymentResponse>(
+      `api/payment/approve-payment/${paymentId}`
+    );
   },
 
   paymentOrders(payment: CreatePaymentDto) {
@@ -56,17 +79,20 @@ export const PaymentService = {
   },
 
   verifyCheckout(payment: any) {
-    return axiosClient.post(`api/payment/verify-checkout`, payment);
-  },
-
-  momoPayment() {
-    return axiosClient.post<PaymentMomoResponse>(
-      `api/payment/momo-payment`,
-      {}
+    return axiosClient.post<VnpayResponse>(
+      `api/payment/verify-checkout`,
+      payment
     );
   },
 
-  momoCallback() {
-    return axiosClient.post(`api/payment/momo-callback`, {});
+  momoPayment(body: MoMoOrderDto) {
+    return axiosClient.post<PaymentMomoResponse>(
+      `api/payment/momo-payment`,
+      body
+    );
+  },
+
+  momoCallback(payment: any) {
+    return axiosClient.post<MomoResponse>(`api/payment/momo-callback`, payment);
   },
 };

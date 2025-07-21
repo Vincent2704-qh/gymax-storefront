@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { Address } from "@/app/(protected)/account/[customerId]/address/page";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -104,4 +105,23 @@ export const pagination = (
     }
   }
   return pages;
+};
+
+export function convertVndToUsd(vnd: number, rate = 25000): string {
+  return (vnd / rate).toFixed(2);
+}
+
+export const generateOrderCode = () => {
+  // Ví dụ: ORD20250708-xxxx
+  return `ORD${new Date()
+    .toISOString()
+    .slice(0, 10)
+    .replace(/-/g, "")}-${Math.floor(Math.random() * 10000)}`;
+};
+
+export const buildShippingAddress = (address: Address) => {
+  // address là object selectedAddress FE của bạn
+  return [address?.address, address?.ward, address?.district, address?.city]
+    .filter(Boolean)
+    .join(", ");
 };

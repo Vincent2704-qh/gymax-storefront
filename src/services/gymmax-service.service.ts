@@ -9,6 +9,9 @@ export interface FilterServiceDto extends BasePaginationDto {
   title?: string;
   sort?: number;
   status?: number[];
+  supplierId?: number[];
+  brandId?: number[];
+  categoryId?: number[];
 }
 
 export const GymmaxService = {

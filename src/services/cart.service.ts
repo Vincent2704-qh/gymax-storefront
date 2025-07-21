@@ -21,6 +21,8 @@ export interface AddCartItemPayload {
   customerId: number;
   items: {
     serviceId: number;
+    serviceVariantId?: number;
+    serviceSizeId?: number;
     quantity: number;
     selected: number;
   }[];

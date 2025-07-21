@@ -24,8 +24,6 @@ export const useFilterCartItem = ({ filter }: Props) => {
   // Debounce the filters
   const debouncedFilters = useDebounce(filters, 500);
 
-  console.log("filter cart", filter);
-
   // Effect to update filters when props change
   useEffect(() => {
     if (filter) {
@@ -48,7 +46,6 @@ export const useFilterCartItem = ({ filter }: Props) => {
     setError(null);
 
     try {
-      console.log("Fetching cart items with filters:", fetchFilters);
       const response = await CartService.filterCartItem(fetchFilters);
       if (response.data) {
         setCartItems(response.data.body);

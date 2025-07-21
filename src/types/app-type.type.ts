@@ -53,3 +53,13 @@ export interface ShippingType {
   createdAt: Date;
   updatedAt: Date;
 }
+
+export interface Supplier {
+  id?: number;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  status?: number;
+  createdAt?: string;
+  updatedAt?: string;
+}

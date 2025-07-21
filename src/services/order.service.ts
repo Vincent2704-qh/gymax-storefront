@@ -10,13 +10,33 @@ export interface FilterOrderDto extends BasePaginationDto {
   status?: number;
 }
 
+export interface OrderItemDto {
+  serviceId: number;
+  serviceVariantId?: number;
+  quantity: number;
+  price: number;
+}
+
+export interface CreateOrderDto {
+  orderCode?: string;
+  customerId: number;
+  discountId?: number;
+  shippingTypeId?: number | null;
+  shippingAddress?: string;
+  totalPrice: number;
+  paidStatus?: number;
+  status?: number;
+  paymentMethod?: string;
+  items: OrderItemDto[];
+}
+
 export const OrderService = {
   async filterOrder(filter: FilterOrderDto) {
     return axiosClient.get<BasePaginationResponse<Order>>(`api/order`, filter);
   },
 
-  async createOrder(data: Order) {
-    return axiosClient.post<Order>("api/order/create", data);
+  async createOrder(data: CreateOrderDto) {
+    return axiosClient.post("api/order/create", data);
   },
 
   async cancelOrder(orderId: number) {

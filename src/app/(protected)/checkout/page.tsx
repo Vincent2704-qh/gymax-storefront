@@ -18,7 +18,12 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { LocalStorageEnum } from "@/enum/app.enums";
-import { getItem } from "@/lib/utils";
+import {
+  buildShippingAddress,
+  convertVndToUsd,
+  generateOrderCode,
+  getItem,
+} from "@/lib/utils";
 import { type CouponDto, DiscountService } from "@/services/discount.service";
 import { ShippingTypeService } from "@/services/shipping-type";
 import type { ShippingType } from "@/types/app-type.type";
@@ -30,6 +35,8 @@ import { PaymentService } from "@/services/payment.service";
 import type { Address } from "../account/[customerId]/address/page";
 import { CustomerService } from "@/services/customer.service";
 import { useFilterCartItem } from "../cart/hooks/useCartItemList";
+import { CustomerDto } from "@/types/customer-type";
+import { CreateOrderDto, OrderService } from "@/services/order.service";
 
 const CheckoutPage = () => {
   const [shippingList, setShippingList] = useState<ShippingType[]>([]);
@@ -38,14 +45,16 @@ const CheckoutPage = () => {
   const [selectedPayment, setSelectedPayment] = useState("cod");
   const [discountCode, setDiscountCode] = useState("");
   const [isApplyingDiscount, setIsApplyingDiscount] = useState(false);
-  const [appliedDiscounts, setAppliedDiscounts] = useState<CouponDto[]>([]);
+  const [appliedDiscount, setAppliedDiscount] = useState<CouponDto | null>(
+    null
+  );
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
   const [isDiscountModalOpen, setIsDiscountModalOpen] = useState(false);
 
-  // Get customerId from localStorage or context
   const [customerId, setCustomerId] = useState<number>();
+  const [customer, setCustomer] = useState<CustomerDto>();
 
   const { pagination, cartItems, loading, onChangePage, refetch } =
     useFilterCartItem({
@@ -77,7 +86,21 @@ const CheckoutPage = () => {
     fetchAddresses();
   }, [customerId]);
 
-  // Initialize customerId from localStorage
+  useEffect(() => {
+    const fetchCustomer = async () => {
+      try {
+        console.log("customerId");
+        console.log(customerId);
+        if (!customerId) return;
+        const res = await CustomerService.getCustomerDetail(customerId);
+        setCustomer(res.data);
+      } catch (err) {
+        toast.error("Không lấy được thông tin khách hàng");
+      }
+    };
+    fetchCustomer();
+  }, [customerId]);
+
   useEffect(() => {
     const userInfoStr = getItem(LocalStorageEnum.UserInfo);
     const userInfo = userInfoStr ? JSON.parse(userInfoStr) : null;
@@ -86,6 +109,40 @@ const CheckoutPage = () => {
       setCustomerId(userInfo.id);
     }
   }, []);
+
+  //====================Cod payment=============================//
+  const handlePlaceOrder = async () => {
+    try {
+      if (!customerId || !selectedAddress) return;
+      const orderPayload: CreateOrderDto = {
+        orderCode: generateOrderCode(),
+        customerId,
+        discountId: appliedDiscount?.id || undefined,
+        shippingTypeId: selectedShipping ? Number(selectedShipping) : null,
+        shippingAddress: buildShippingAddress(selectedAddress),
+        totalPrice: calculateTotal(),
+        paidStatus: 0, // Chưa thanh toán
+        status: 0,
+        paymentMethod: "cod",
+        items: cartItems.map((item) => ({
+          serviceId: item.serviceId,
+          quantity: item.quantity,
+          price: item.serviceDetail.price,
+        })),
+      };
+      const res = await OrderService.createOrder(orderPayload);
+      if (res.data) {
+        toast.success("Đặt hàng thành công!");
+        setTimeout(() => {
+          window.location.href = "/complete-payment";
+        }, 500);
+      } else {
+        toast.error("Đặt hàng thất bại!");
+      }
+    } catch (error) {
+      toast.error("Có lỗi xảy ra khi đặt hàng!");
+    }
+  };
 
   //========================Payment handle==============================
   const initialOptions = {
@@ -96,7 +153,29 @@ const CheckoutPage = () => {
   //Xử lí momo pay
   const handleMomoCheckout = async () => {
     try {
-      const response = await PaymentService.momoPayment();
+      if (!customerId || !selectedAddress) return;
+      const orderPayload: CreateOrderDto = {
+        orderCode: generateOrderCode(),
+        customerId,
+        discountId: appliedDiscount?.id || undefined,
+        shippingTypeId: selectedShipping ? Number(selectedShipping) : null,
+        shippingAddress: buildShippingAddress(selectedAddress),
+        totalPrice: calculateTotal(),
+        paidStatus: 1,
+        status: 0,
+        paymentMethod: "momoPayment",
+        items: cartItems.map((item) => ({
+          serviceId: item.serviceId,
+          quantity: item.quantity,
+          price: item.serviceDetail.price,
+        })),
+      };
+      localStorage.setItem("pendingOrder", JSON.stringify(orderPayload));
+
+      const response = await PaymentService.momoPayment({
+        amount: calculateTotal(),
+        orderInfo: "Thanh toán Gymmax",
+      });
       console.log("Payment response:", response.data.payUrl);
       if (response?.data?.payUrl) {
         window.location.href = formatURL(response.data.payUrl);
@@ -105,18 +184,6 @@ const CheckoutPage = () => {
       }
     } catch (error: any) {
       console.error("Error creating payment URL:", error);
-      if (error.response) {
-        console.error("Response status:", error.response.status);
-        console.error(
-          "Response data:",
-          JSON.stringify(error.response.data, null, 2)
-        );
-        console.error("Response headers:", error.response.headers);
-      } else if (error.request) {
-        console.error("Request data:", error.request);
-      } else {
-        console.error("Error message:", error.message);
-      }
     }
   };
 
@@ -152,36 +219,92 @@ const CheckoutPage = () => {
       const response = await PaymentService.paymentOrders(payload);
       console.log("Payment response:", response.data);
       if (response?.data?.url) {
+        if (!customerId || !selectedAddress) return;
+        const orderPayload: CreateOrderDto = {
+          orderCode: generateOrderCode(),
+          customerId,
+          discountId: appliedDiscount?.id || undefined,
+          shippingTypeId: selectedShipping ? Number(selectedShipping) : null,
+          shippingAddress: buildShippingAddress(selectedAddress),
+          totalPrice: calculateTotal(),
+          paidStatus: 1,
+          status: 0,
+          paymentMethod: "vnpayPayment",
+          items: cartItems.map((item) => ({
+            serviceId: item.serviceId,
+            quantity: item.quantity,
+            price: item.serviceDetail.price,
+          })),
+        };
+        localStorage.setItem("pendingOrder", JSON.stringify(orderPayload));
         window.location.href = formatURL(response.data.url);
       } else {
         console.error("No payment URL returned");
       }
     } catch (error: any) {
       console.error("Error creating payment URL:", error);
-      if (error.response) {
-        console.error("Response status:", error.response.status);
-        console.error(
-          "Response data:",
-          JSON.stringify(error.response.data, null, 2)
-        );
-        console.error("Response headers:", error.response.headers);
-      } else if (error.request) {
-        console.error("Request data:", error.request);
-      } else {
-        console.error("Error message:", error.message);
-      }
     }
   };
 
   const onCreateOrder = async () => {
     try {
-      console.log("Creating PayPal order...");
-      const response = await PaymentService.onCreateOrder();
-      console.log("Response data:", response.data);
+      // Tạo danh sách items cho PayPal
+      const items = cartItems.map((item) => ({
+        name: item.serviceDetail?.productTitle || "Sản phẩm",
+        description: "",
+        quantity: item.quantity.toString(),
+        currency_code: "USD",
+        value: convertVndToUsd(item.serviceDetail.price),
+      }));
+
+      // Tính tổng tiền USD từ các item
+      const usdValue = items
+        .reduce(
+          (sum, item) => sum + parseFloat(item.value) * parseInt(item.quantity),
+          0
+        )
+        .toFixed(2);
+
+      // Thông tin shipping
+      const shipping = {
+        full_name: `${customer?.lastName} ${customer?.firstName}`,
+        address_line_1: selectedAddress?.address || "",
+        admin_area_2: selectedAddress?.district || "",
+        admin_area_1: selectedAddress?.city || "",
+        country_code: "VN",
+        postal_code: "",
+      };
+
+      const payload = {
+        items,
+        currency_code: "USD",
+        value: usdValue,
+        shipping,
+      };
+
+      if (selectedAddress && customerId) {
+        const orderPayload: CreateOrderDto = {
+          orderCode: generateOrderCode(),
+          customerId,
+          discountId: appliedDiscount?.id || undefined,
+          shippingTypeId: selectedShipping ? Number(selectedShipping) : null,
+          shippingAddress: buildShippingAddress(selectedAddress),
+          totalPrice: calculateTotal(),
+          paidStatus: 1,
+          status: 0,
+          paymentMethod: "paypalPayment",
+          items: cartItems.map((item) => ({
+            serviceId: item.serviceId,
+            quantity: item.quantity,
+            price: item.serviceDetail.price,
+          })),
+        };
+        localStorage.setItem("pendingOrder", JSON.stringify(orderPayload));
+      }
+
+      const response = await PaymentService.onCreateOrder(payload);
       if (response.data && response.data.success && response.data.data) {
         const paypalData = response.data.data;
-        console.log("PayPal order ID:", paypalData.id);
-        console.log("PayPal order status:", paypalData.status);
         return paypalData.id;
       } else {
         console.error("Invalid response structure:", response.data);
@@ -189,15 +312,6 @@ const CheckoutPage = () => {
       }
     } catch (err: any) {
       console.error("Error creating PayPal order:", err);
-      if (err.response) {
-        console.error("Error response status:", err.response.status);
-        console.error("Error response data:", err.response.data);
-        console.error("Error response headers:", err.response.headers);
-      } else if (err.request) {
-        console.error("No response received:", err.request);
-      } else {
-        console.error("Error message:", err.message);
-      }
       throw err;
     }
   };
@@ -209,9 +323,39 @@ const CheckoutPage = () => {
         throw new Error("Invalid order ID");
       }
       const response = await PaymentService.appprovePayment(data.orderID);
-      console.log("Approval response:", response);
-      if (response.data) {
-        window.location.href = "/complete-payment";
+      if (response.data.data.status == "COMPLETED") {
+        //create order
+        const orderCode = generateOrderCode();
+        if (!selectedAddress || !customerId) return;
+        const shippingAddress = buildShippingAddress(selectedAddress);
+
+        const orderPayload: CreateOrderDto = {
+          orderCode,
+          customerId,
+          discountId: appliedDiscount?.id || undefined, // hoặc null
+          shippingTypeId: selectedShipping ? Number(selectedShipping) : null,
+          shippingAddress,
+          totalPrice: calculateTotal(),
+          paidStatus: 1,
+          status: 0,
+          paymentMethod: selectedPayment,
+          items: cartItems.map((item) => ({
+            serviceId: item.serviceId, // FE phải có trường này
+            // serviceVariantId: item.serviceVariantId,
+            quantity: item.quantity,
+            price: item.serviceDetail.price,
+          })),
+        };
+        const orderRes = await OrderService.createOrder(orderPayload);
+
+        if (orderRes.data) {
+          setTimeout(() => {
+            window.location.href = "/complete-payment";
+          }, 500);
+        } else {
+          throw new Error("Create Order Failed");
+        }
+        // Chuyển trang
       } else {
         throw new Error("Payment approval failed");
       }
@@ -233,16 +377,13 @@ const CheckoutPage = () => {
         const foundCoupon = discountCouponList.find(
           (coupon) => coupon.couponCode === code
         );
-        if (
-          foundCoupon &&
-          !appliedDiscounts.find((applied) => applied.id === foundCoupon.id)
-        ) {
-          setAppliedDiscounts((prev) => [...prev, foundCoupon]);
-          toast.success("Áp dụng mã giảm giá thành công");
-        } else if (
-          appliedDiscounts.find((applied) => applied.couponCode === code)
-        ) {
-          toast.error("Mã giảm giá đã được áp dụng");
+        if (foundCoupon) {
+          if (appliedDiscount && appliedDiscount.id === foundCoupon.id) {
+            toast.error("Mã giảm giá đã được áp dụng");
+          } else {
+            setAppliedDiscount(foundCoupon); // Set single discount
+            toast.success("Áp dụng mã giảm giá thành công");
+          }
         } else {
           toast.error("Mã giảm giá không hợp lệ");
         }
@@ -250,12 +391,12 @@ const CheckoutPage = () => {
         setDiscountCode("");
       }, 500);
     },
-    [appliedDiscounts, discountCouponList]
+    [appliedDiscount, discountCouponList]
   );
 
   const handleApplyCoupon = (coupon: CouponDto) => {
-    if (!appliedDiscounts.find((applied) => applied.id === coupon.id)) {
-      setAppliedDiscounts((prev) => [...prev, coupon]);
+    if (!appliedDiscount || appliedDiscount.id !== coupon.id) {
+      setAppliedDiscount(coupon); // Set single discount
       toast.success("Áp dụng mã giảm giá thành công");
       setIsDiscountModalOpen(false);
     } else {
@@ -263,10 +404,8 @@ const CheckoutPage = () => {
     }
   };
 
-  const handleRemoveCoupon = (couponId: number) => {
-    setAppliedDiscounts((prev) =>
-      prev.filter((coupon) => coupon.id !== couponId)
-    );
+  const handleRemoveCoupon = () => {
+    setAppliedDiscount(null); // Remove single discount
     toast.success("Đã bỏ chọn mã giảm giá");
   };
 
@@ -335,27 +474,19 @@ const CheckoutPage = () => {
   };
 
   const calculateDiscount = () => {
-    return appliedDiscounts.reduce((sum, coupon) => {
-      if (coupon.discountType === 1) {
-        return sum + (calculateSubtotal() * (coupon?.percentage ?? 0)) / 100;
-      } else {
-        return sum + (coupon?.amount ?? 0);
-      }
-    }, 0);
-  };
+    if (!appliedDiscount) return 0; // Updated for single discount
 
-  const calculateShippingDiscount = () => {
-    // Example shipping discount
-    return 0;
+    if (appliedDiscount.discountType === 1) {
+      return (calculateSubtotal() * (appliedDiscount?.percentage ?? 0)) / 100;
+    } else {
+      return appliedDiscount?.amount ?? 0;
+    }
   };
 
   const calculateTotal = () => {
     return Math.max(
       0,
-      calculateSubtotal() +
-        calculateShippingFee() -
-        calculateDiscount() -
-        calculateShippingDiscount()
+      calculateSubtotal() + calculateShippingFee() - calculateDiscount()
     );
   };
 
@@ -511,34 +642,29 @@ const CheckoutPage = () => {
                 </CardHeader>
                 <CardContent className="p-4">
                   {/* Applied Discounts */}
-                  {appliedDiscounts.length > 0 && (
+                  {appliedDiscount && (
                     <div className="space-y-2 mb-4">
-                      {appliedDiscounts.map((coupon) => (
-                        <div
-                          key={coupon.id}
-                          className="flex items-center gap-2"
-                        >
-                          <div className="flex-1 border rounded-md p-3 bg-blue-50">
-                            <div className="flex items-center">
-                              <Ticket className="h-4 w-4 mr-2" />
-                              <span className="text-sm font-medium">
-                                {coupon.couponCode} - Giảm{" "}
-                                {coupon.discountType === 1
-                                  ? `${coupon.percentage ?? 0}%`
-                                  : `${coupon.amount?.toLocaleString()}₫`}
-                              </span>
-                            </div>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 border rounded-md p-3 bg-blue-50">
+                          <div className="flex items-center">
+                            <Ticket className="h-4 w-4 mr-2" />
+                            <span className="text-sm font-medium">
+                              {appliedDiscount.couponCode} - Giảm{" "}
+                              {appliedDiscount.discountType === 1
+                                ? `${appliedDiscount.percentage ?? 0}%`
+                                : `${appliedDiscount.amount?.toLocaleString()}₫`}
+                            </span>
                           </div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleRemoveCoupon(coupon.id ?? 0)}
-                            className="bg-red-500 text-white hover:bg-red-600"
-                          >
-                            Bỏ Chọn
-                          </Button>
                         </div>
-                      ))}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleRemoveCoupon}
+                          className="bg-red-500 text-white hover:bg-red-600"
+                        >
+                          Bỏ Chọn
+                        </Button>
+                      </div>
                     </div>
                   )}
 
@@ -557,14 +683,13 @@ const CheckoutPage = () => {
                       <DialogHeader>
                         <DialogTitle>Chọn mã giảm giá</DialogTitle>
                         <DialogDescription>
-                          Chọn mã giảm giá phù hợp cho đơn hàng của bạn
+                          Chọn mã giảm giá phù hợp cho đơn hàng của bạn (chỉ
+                          được chọn 1 mã)
                         </DialogDescription>
                       </DialogHeader>
                       <div className="max-h-96 overflow-y-auto space-y-3">
                         {discountCouponList.map((coupon) => {
-                          const isApplied = appliedDiscounts.find(
-                            (applied) => applied.id === coupon.id
-                          );
+                          const isApplied = appliedDiscount?.id === coupon.id;
                           return (
                             <div
                               key={coupon.id}
@@ -631,6 +756,7 @@ const CheckoutPage = () => {
                         className="flex-1"
                       />
                       <Button
+                        className="text-white"
                         onClick={() => handleValidateDiscountCode(discountCode)}
                         disabled={isApplyingDiscount || !discountCode}
                       >
@@ -809,14 +935,6 @@ const CheckoutPage = () => {
                         <span>-{calculateDiscount().toLocaleString()}₫</span>
                       </div>
                     )}
-                    {calculateShippingDiscount() > 0 && (
-                      <div className="flex justify-between text-green-600">
-                        <span className="text-sm">Giảm phí vận chuyển</span>
-                        <span>
-                          -{calculateShippingDiscount().toLocaleString()}₫
-                        </span>
-                      </div>
-                    )}
                   </div>
 
                   <Separator className="my-4" />
@@ -852,7 +970,10 @@ const CheckoutPage = () => {
                       Thanh toán bằng MoMo
                     </Button>
                   ) : (
-                    <Button className="w-full bg-red-500 hover:bg-red-600 text-white">
+                    <Button
+                      onClick={handlePlaceOrder}
+                      className="w-full bg-red-500 hover:bg-red-600 text-white"
+                    >
                       Đặt hàng
                     </Button>
                   )}

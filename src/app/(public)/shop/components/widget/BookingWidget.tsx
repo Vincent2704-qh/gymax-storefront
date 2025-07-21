@@ -5,9 +5,11 @@ import { Calendar } from "@/components/ui/calendar";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,10 +30,14 @@ import {
 } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { motion, AnimatePresence } from "framer-motion";
-import { CreditCard } from "lucide-react";
+import { ChevronRight, Ticket } from "lucide-react";
 import Image from "next/image";
 import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 import { PaymentService } from "@/services/payment.service";
+import { type CouponDto, DiscountService } from "@/services/discount.service";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { convertVndToUsd } from "@/lib/utils";
 
 interface Props {
   isOpen: boolean;
@@ -57,8 +63,93 @@ const BookingWidget = ({ isOpen, onClose, serviceId, customerId }: Props) => {
     PaidStatus.Unpaid
   );
   const [selectedPayment, setSelectedPayment] = useState("paypalPayment");
-  console.log("selectedPayment");
-  console.log(selectedPayment);
+  const [discountCouponList, setDiscountCouponList] = useState<CouponDto[]>([]);
+  const [appliedDiscount, setAppliedDiscount] = useState<CouponDto | null>(
+    null
+  );
+  const [discountCode, setDiscountCode] = useState("");
+  const [isApplyingDiscount, setIsApplyingDiscount] = useState(false);
+  const [isDiscountModalOpen, setIsDiscountModalOpen] = useState(false);
+
+  useEffect(() => {
+    const fetchDiscountCoupon = async () => {
+      try {
+        if (!customerId || !service?.id) return;
+        const response = await DiscountService.filterDiscount({
+          customerId,
+          serviceId: [service.id],
+        });
+        if (response.data.body) {
+          setDiscountCouponList(response.data.body);
+        }
+      } catch (err) {
+        toast.error("Không thể tải mã giảm giá", {
+          description: (err as Error)?.message,
+        });
+      }
+    };
+
+    fetchDiscountCoupon();
+  }, [customerId, service?.id]);
+
+  const handleValidateDiscountCode = useCallback(
+    (code: string) => {
+      setIsApplyingDiscount(true);
+      setTimeout(() => {
+        const foundCoupon = discountCouponList.find(
+          (coupon) => coupon.couponCode === code
+        );
+        if (foundCoupon) {
+          if (appliedDiscount && appliedDiscount.id === foundCoupon.id) {
+            toast.error("Mã giảm giá đã được áp dụng");
+          } else {
+            setAppliedDiscount(foundCoupon);
+            toast.success("Áp dụng mã giảm giá thành công");
+          }
+        } else {
+          toast.error("Mã giảm giá không hợp lệ");
+        }
+        setIsApplyingDiscount(false);
+        setDiscountCode("");
+      }, 500);
+    },
+    [appliedDiscount, discountCouponList]
+  );
+
+  const handleApplyCoupon = (coupon: CouponDto) => {
+    if (!appliedDiscount || appliedDiscount.id !== coupon.id) {
+      setAppliedDiscount(coupon);
+      toast.success("Áp dụng mã giảm giá thành công");
+      setIsDiscountModalOpen(false);
+    } else {
+      toast.error("Mã giảm giá đã được áp dụng");
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedDiscount(null);
+    toast.success("Đã bỏ chọn mã giảm giá");
+  };
+
+  // Tính toán giá tiền
+  const calculateSubtotal = () => {
+    const price = service?.price ?? 0;
+    return price * bookingQuantity;
+  };
+
+  const calculateDiscount = () => {
+    if (!appliedDiscount) return 0;
+    const subtotal = calculateSubtotal();
+    if (appliedDiscount.discountType === 1) {
+      return (subtotal * (appliedDiscount?.percentage ?? 0)) / 100;
+    } else {
+      return appliedDiscount?.amount ?? 0;
+    }
+  };
+
+  const calculateTotal = () => {
+    return Math.max(0, calculateSubtotal() - calculateDiscount());
+  };
 
   //========================Payment handle==============================
   const initialOptions = {
@@ -69,9 +160,13 @@ const BookingWidget = ({ isOpen, onClose, serviceId, customerId }: Props) => {
   //Xử lí momo pay
   const handleMomoCheckout = async () => {
     try {
-      const response = await PaymentService.momoPayment();
-      console.log("Payment response:", response.data.payUrl); // Debugging log
+      if (!customerId) return;
 
+      const response = await PaymentService.momoPayment({
+        amount: calculateTotal(),
+        orderInfo: "Thanh toán Gymmax",
+      });
+      console.log("Payment response:", response.data.payUrl);
       if (response?.data?.payUrl) {
         window.location.href = formatURL(response.data.payUrl);
       } else {
@@ -79,19 +174,6 @@ const BookingWidget = ({ isOpen, onClose, serviceId, customerId }: Props) => {
       }
     } catch (error: any) {
       console.error("Error creating payment URL:", error);
-
-      if (error.response) {
-        console.error("Response status:", error.response.status);
-        console.error(
-          "Response data:",
-          JSON.stringify(error.response.data, null, 2)
-        );
-        console.error("Response headers:", error.response.headers);
-      } else if (error.request) {
-        console.error("Request data:", error.request);
-      } else {
-        console.error("Error message:", error.message);
-      }
     }
   };
 
@@ -100,31 +182,39 @@ const BookingWidget = ({ isOpen, onClose, serviceId, customerId }: Props) => {
     url = url.replace(/,\?/, "?");
     return url;
   }
-  //Xử lí vnpay
 
+  //Xử lí vnpay
   const handleCheckout = async () => {
+    const objBooking: any = {
+      serviceId: serviceId || 0,
+      userId: selectedStaffId,
+      quantity: bookingQuantity,
+      bookingTypeId: service?.bookingTypeId,
+      bookingSubsId: bookingSubsId || undefined,
+      customerId: customerId,
+      paid: bookingPaidStatus,
+      schedules: timeSlot,
+      paymentMethod: selectedPayment,
+      discountId: appliedDiscount?.id || undefined,
+      totalPrice: calculateTotal(),
+      isCreateBooking: true, // Đánh dấu là booking
+    };
+    localStorage.setItem("pendingOrder", JSON.stringify(objBooking));
+
     const orderInfo = {
-      address: "số nhà 29, Thịnh Quang, Đống Đa",
-      phone: Number("0962212482"),
-      email_receiver: "qhuy113749885hh@gmail.com",
-      receiver_name: "Đinh Quốc Huy",
       cart_id: Math.random().toString(36).substr(2, 10),
     };
-
     const payload = {
-      amount: 500000,
+      amount: calculateTotal(),
       orderInfo,
     };
-
     console.log(
       "Sending payment request payload:",
       JSON.stringify(payload, null, 2)
-    ); // Debugging log
-
+    );
     try {
       const response = await PaymentService.paymentOrders(payload);
-      console.log("Payment response:", response.data); // Debugging log
-
+      console.log("Payment response:", response.data);
       if (response?.data?.url) {
         window.location.href = formatURL(response.data.url);
       } else {
@@ -132,37 +222,32 @@ const BookingWidget = ({ isOpen, onClose, serviceId, customerId }: Props) => {
       }
     } catch (error: any) {
       console.error("Error creating payment URL:", error);
-
-      if (error.response) {
-        console.error("Response status:", error.response.status);
-        console.error(
-          "Response data:",
-          JSON.stringify(error.response.data, null, 2)
-        );
-        console.error("Response headers:", error.response.headers);
-      } else if (error.request) {
-        console.error("Request data:", error.request);
-      } else {
-        console.error("Error message:", error.message);
-      }
     }
   };
 
-  // Phần onCreateOrder trong CheckoutPage component
   const onCreateOrder = async () => {
     try {
-      console.log("Creating PayPal order...");
+      const totalVnd = calculateTotal();
+      const usdValue = convertVndToUsd(totalVnd);
 
-      const response = await PaymentService.onCreateOrder();
+      const payload = {
+        bookingCheckout: true,
+        items: [
+          {
+            name: service?.productTitle,
+            description: "",
+            quantity: `${bookingQuantity}`,
+            currency_code: "USD",
+            value: `${convertVndToUsd(service?.price ?? 0)}`,
+          },
+        ],
+        currency_code: "USD",
+        value: usdValue,
+      };
 
-      console.log("Response data:", response.data);
-
-      // Kiểm tra response structure
+      const response = await PaymentService.onCreateOrder(payload);
       if (response.data && response.data.success && response.data.data) {
         const paypalData = response.data.data;
-        console.log("PayPal order ID:", paypalData.id);
-        console.log("PayPal order status:", paypalData.status);
-
         return paypalData.id;
       } else {
         console.error("Invalid response structure:", response.data);
@@ -170,18 +255,6 @@ const BookingWidget = ({ isOpen, onClose, serviceId, customerId }: Props) => {
       }
     } catch (err: any) {
       console.error("Error creating PayPal order:", err);
-
-      // Detailed error logging
-      if (err.response) {
-        console.error("Error response status:", err.response.status);
-        console.error("Error response data:", err.response.data);
-        console.error("Error response headers:", err.response.headers);
-      } else if (err.request) {
-        console.error("No response received:", err.request);
-      } else {
-        console.error("Error message:", err.message);
-      }
-
       throw err;
     }
   };
@@ -189,16 +262,11 @@ const BookingWidget = ({ isOpen, onClose, serviceId, customerId }: Props) => {
   const onApprove = async (data: any) => {
     try {
       console.log("Approval data:", data);
-
       if (!data.orderID) {
-        // PayPal trả về orderID, không phải orderId
         throw new Error("Invalid order ID");
       }
-
       const response = await PaymentService.appprovePayment(data.orderID);
-
       console.log("Approval response:", response);
-
       if (response.data) {
         window.location.href = "/complete-payment";
       } else {
@@ -226,29 +294,24 @@ const BookingWidget = ({ isOpen, onClose, serviceId, customerId }: Props) => {
       paid: bookingPaidStatus,
       schedules: timeSlot,
       paymentMethod: selectedPayment,
+      discountId: appliedDiscount?.id || undefined,
+      totalPrice: calculateTotal(),
     };
 
     const result = await BookingService.createBooking(objBooking)
       .then(() => {
         toast.success("Đặt lịch thành công");
-
-        // Xử lý theo phương thức thanh toán được chọn
         if (selectedPayment === "vnpay") {
-          // Redirect to VnPay
           window.location.href = "/payment/vnpay";
         } else if (selectedPayment === "momo") {
-          // Redirect to MoMo
           window.location.href = "/payment/momo";
         } else if (selectedPayment === "paypal") {
-          // Redirect to PayPal
           window.location.href = "/payment/paypal";
         }
-        // COD không cần redirect
       })
       .catch((e) => {
         toast.error(`Đặt lịch thất bại ${e}`);
       });
-
     return result;
   }, [
     service,
@@ -257,6 +320,7 @@ const BookingWidget = ({ isOpen, onClose, serviceId, customerId }: Props) => {
     bookingSubsId,
     timeSlot,
     selectedPayment,
+    appliedDiscount,
   ]);
 
   useEffect(() => {
@@ -283,7 +347,6 @@ const BookingWidget = ({ isOpen, onClose, serviceId, customerId }: Props) => {
 
   useEffect(() => {
     if (!serviceId || !currentMonth || !selectedStaffId) return;
-
     async function fetchAvailableDates() {
       const startOfMonth = new Date(
         currentMonth.getFullYear(),
@@ -295,7 +358,6 @@ const BookingWidget = ({ isOpen, onClose, serviceId, customerId }: Props) => {
         currentMonth.getMonth() + 1,
         0
       );
-
       const fromTime = Math.floor(startOfMonth.getTime() / 1000);
       const toTime = Math.floor(endOfMonth.getTime() / 1000);
 
@@ -311,13 +373,11 @@ const BookingWidget = ({ isOpen, onClose, serviceId, customerId }: Props) => {
         toast.error("Failed to load available dates");
       }
     }
-
     fetchAvailableDates();
-  }, [serviceId, currentMonth]);
+  }, [serviceId, currentMonth, selectedStaffId]);
 
   useEffect(() => {
     if (!selectedDate || !serviceId) return;
-
     async function fetchTimeSlots() {
       const startOfDay = new Date(
         selectedDate?.getFullYear()!,
@@ -335,7 +395,6 @@ const BookingWidget = ({ isOpen, onClose, serviceId, customerId }: Props) => {
         59,
         59
       );
-
       const fromTime = Math.floor(startOfDay.getTime() / 1000);
       const toTime = Math.floor(endOfDay.getTime() / 1000);
 
@@ -347,11 +406,9 @@ const BookingWidget = ({ isOpen, onClose, serviceId, customerId }: Props) => {
           toTime,
           bookingQuantity: bookingQuantity,
         });
-
         const slots = result.data.map((slot) => {
           const from = new Date(slot.fromTime * 1000);
           const to = new Date(slot.toTime * 1000);
-
           return (
             from.toLocaleTimeString([], {
               hour: "2-digit",
@@ -366,13 +423,11 @@ const BookingWidget = ({ isOpen, onClose, serviceId, customerId }: Props) => {
             })
           );
         });
-
         setAvailableTimeSlots(slots);
       } catch (err) {
         toast.error("Failed to load available time slots");
       }
     }
-
     fetchTimeSlots();
   }, [selectedDate, serviceId, selectedStaffId]);
 
@@ -400,7 +455,6 @@ const BookingWidget = ({ isOpen, onClose, serviceId, customerId }: Props) => {
               <DialogHeader className="space-y-4">
                 <DialogTitle>Lên lịch hẹn</DialogTitle>
               </DialogHeader>
-
               <div className="space-y-4">
                 <Label>Nhân viên</Label>
                 <Select
@@ -424,7 +478,6 @@ const BookingWidget = ({ isOpen, onClose, serviceId, customerId }: Props) => {
                   </SelectContent>
                 </Select>
               </div>
-
               <div className="space-y-4">
                 <span>Số lượng</span>
                 <Input
@@ -435,7 +488,6 @@ const BookingWidget = ({ isOpen, onClose, serviceId, customerId }: Props) => {
                   onChange={(e) => setBookingQuantity(e.target.valueAsNumber)}
                 />
               </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-4">
                   <p className="font-medium">
@@ -459,8 +511,7 @@ const BookingWidget = ({ isOpen, onClose, serviceId, customerId }: Props) => {
                     }}
                   />
                 </div>
-
-                <div className="space-y-8 mt-3">
+                <div className="space-y-2 mt-3">
                   <Label>Khung giờ khả thi</Label>
                   {selectedDate ? (
                     availableTimeSlots.length > 0 ? (
@@ -470,7 +521,6 @@ const BookingWidget = ({ isOpen, onClose, serviceId, customerId }: Props) => {
                           .split(":")
                           .map(Number);
                         const [toHour, toMinute] = toStr.split(":").map(Number);
-
                         const selectedDateInfo = selectedDate
                           ? {
                               year: selectedDate.getFullYear(),
@@ -478,7 +528,6 @@ const BookingWidget = ({ isOpen, onClose, serviceId, customerId }: Props) => {
                               day: selectedDate.getDate(),
                             }
                           : null;
-
                         const fromTime = selectedDateInfo
                           ? Math.floor(
                               new Date(
@@ -490,7 +539,6 @@ const BookingWidget = ({ isOpen, onClose, serviceId, customerId }: Props) => {
                               ).getTime() / 1000
                             )
                           : 0;
-
                         const toTime = selectedDateInfo
                           ? Math.floor(
                               new Date(
@@ -502,7 +550,6 @@ const BookingWidget = ({ isOpen, onClose, serviceId, customerId }: Props) => {
                               ).getTime() / 1000
                             )
                           : 0;
-
                         const isActive =
                           timeSlot?.[0]?.fromTime === fromTime &&
                           timeSlot?.[0]?.toTime === toTime;
@@ -532,7 +579,6 @@ const BookingWidget = ({ isOpen, onClose, serviceId, customerId }: Props) => {
                   )}
                 </div>
               </div>
-
               <DialogFooter className="pt-4">
                 <Button
                   className="w-full text-white "
@@ -587,13 +633,170 @@ const BookingWidget = ({ isOpen, onClose, serviceId, customerId }: Props) => {
                         ?.name
                     }
                   </p>
-                  <p className="text-lg font-bold text-red-600">
-                    <strong>Tổng tiền:</strong>{" "}
-                    {(() => {
-                      const price = service?.price ?? 0;
-                      return (price * bookingQuantity).toLocaleString() + "đ";
-                    })()}
-                  </p>
+                </div>
+              </div>
+
+              {/* Khuyến mãi */}
+              <div className="space-y-4 p-4 border rounded-lg">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-lg flex items-center">
+                    <Ticket className="h-5 w-5 mr-2" />
+                    Khuyến Mãi
+                  </h3>
+                </div>
+
+                {/* Applied Discounts */}
+                {appliedDiscount && (
+                  <div className="space-y-2 mb-4">
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 border rounded-md p-3 bg-blue-50">
+                        <div className="flex items-center">
+                          <Ticket className="h-4 w-4 mr-2" />
+                          <span className="text-sm font-medium">
+                            {appliedDiscount.couponCode} - Giảm{" "}
+                            {appliedDiscount.discountType === 1
+                              ? `${appliedDiscount.percentage ?? 0}%`
+                              : `${appliedDiscount.amount?.toLocaleString()}₫`}
+                          </span>
+                        </div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleRemoveCoupon}
+                        className="bg-red-500 text-white hover:bg-red-600"
+                      >
+                        Bỏ Chọn
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Discount Selection */}
+                <Dialog
+                  open={isDiscountModalOpen}
+                  onOpenChange={setIsDiscountModalOpen}
+                >
+                  <DialogTrigger asChild>
+                    <div className="flex items-center text-blue-500 text-sm cursor-pointer hover:underline">
+                      <span>Chọn mã giảm giá</span>
+                      <ChevronRight className="h-4 w-4" />
+                    </div>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-2xl bg-white">
+                    <DialogHeader>
+                      <DialogTitle>Chọn mã giảm giá</DialogTitle>
+                      <DialogDescription>
+                        Chọn mã giảm giá phù hợp cho đơn hàng của bạn (chỉ được
+                        chọn 1 mã)
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="max-h-96 overflow-y-auto space-y-3">
+                      {discountCouponList.map((coupon) => {
+                        const isApplied = appliedDiscount?.id === coupon.id;
+                        return (
+                          <div
+                            key={coupon.id}
+                            className={`border rounded-lg p-4 ${
+                              isApplied
+                                ? "border-green-500 bg-green-50"
+                                : "border-gray-200"
+                            }`}
+                          >
+                            <div className="flex justify-between items-start">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                  {isApplied && (
+                                    <Badge className="text-xs bg-green-500">
+                                      Đã áp dụng
+                                    </Badge>
+                                  )}
+                                </div>
+                                <p className="font-medium text-sm">
+                                  {coupon.couponCode}
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                  Giảm{" "}
+                                  {coupon.discountType === 1
+                                    ? `${coupon.percentage}%`
+                                    : `${coupon.amount?.toLocaleString()}₫`}
+                                </p>
+                                {coupon.description && (
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    {coupon.description}
+                                  </p>
+                                )}
+                              </div>
+                              <Button
+                                size="sm"
+                                onClick={() => handleApplyCoupon(coupon)}
+                                disabled={!!isApplied}
+                                className={
+                                  isApplied ? "bg-green-500" : "text-white"
+                                }
+                              >
+                                {isApplied ? "Đã chọn" : "Chọn"}
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {discountCouponList.length === 0 && (
+                        <p className="text-center text-muted-foreground py-8">
+                          Không có mã giảm giá khả dụng
+                        </p>
+                      )}
+                    </div>
+                  </DialogContent>
+                </Dialog>
+
+                {/* Manual Discount Code Input */}
+                <div className="mt-4">
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Nhập mã giảm giá"
+                      value={discountCode}
+                      onChange={(e) => setDiscountCode(e.target.value)}
+                      className="flex-1"
+                    />
+                    <Button
+                      className="text-white"
+                      onClick={() => handleValidateDiscountCode(discountCode)}
+                      disabled={isApplyingDiscount || !discountCode}
+                    >
+                      Áp dụng
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tổng tiền */}
+              <div className="space-y-3 p-4 border rounded-lg">
+                <h3 className="font-semibold text-lg">Chi tiết thanh toán</h3>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Giá dịch vụ</span>
+                    <span>{(service?.price ?? 0).toLocaleString()}₫</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Số lượng</span>
+                    <span>x{bookingQuantity}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Tạm tính</span>
+                    <span>{calculateSubtotal().toLocaleString()}₫</span>
+                  </div>
+                  {calculateDiscount() > 0 && (
+                    <div className="flex justify-between text-sm text-green-600">
+                      <span>Giảm giá</span>
+                      <span>-{calculateDiscount().toLocaleString()}₫</span>
+                    </div>
+                  )}
+                  <Separator />
+                  <div className="flex justify-between font-bold text-lg text-red-600">
+                    <span>Tổng tiền</span>
+                    <span>{calculateTotal().toLocaleString()}₫</span>
+                  </div>
                 </div>
               </div>
 
@@ -632,7 +835,6 @@ const BookingWidget = ({ isOpen, onClose, serviceId, customerId }: Props) => {
                       </div>
                     </div>
                   </div>
-
                   {/* VnPay */}
                   <div className="border rounded-lg p-4">
                     <div className="flex items-center space-x-3">
@@ -655,7 +857,6 @@ const BookingWidget = ({ isOpen, onClose, serviceId, customerId }: Props) => {
                       </div>
                     </div>
                   </div>
-
                   {/* MoMo */}
                   <div className="border rounded-lg p-4">
                     <div className="flex items-center space-x-3">

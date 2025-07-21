@@ -1,11 +1,13 @@
 export interface Order {
   id?: number;
   orderCode: string | null;
-  customerId: number;
+  customerId: number | undefined;
+  discountId: number;
+  shippingTypeId: number | null;
+  shippingAddress: string | null;
   totalPrice: number;
   paidStatus: number;
-  fulfillmentStatus: number;
-  orderType: number;
+  status: number;
   paymentMethod: string | null;
   createdAt?: string;
   updatedAt?: string;
@@ -14,11 +16,8 @@ export interface Order {
 export interface OrderItem {
   id?: number;
   orderId: number;
-  customerId: number;
-  customerAddressId: number;
-  discountId: number;
+  serviceId: number;
   serviceVariantId: number;
-  serviceSizeId: number;
   quantity: number;
   price: number;
   createdAt?: string;

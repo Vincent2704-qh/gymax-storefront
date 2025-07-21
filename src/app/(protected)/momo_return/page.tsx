@@ -12,9 +12,8 @@ import { getItem } from "@/lib/utils";
 import { LocalStorageEnum } from "@/enum/app.enums";
 import { OrderService } from "@/services/order.service";
 import { useRef } from "react";
-import { BookingService } from "@/services/booking.service";
 
-const VnPayReturn = () => {
+const MomoReturn = () => {
   const hasVerified = useRef(false);
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -40,27 +39,16 @@ const VnPayReturn = () => {
 
     try {
       if (searchParams) {
-        const res = await PaymentService.verifyCheckout(
+        const res = await PaymentService.momoCallback(
           queryString.parse(searchParams.toString())
         );
 
-        if (res.data.checked === true && !orderCreated) {
+        // resultCode = 0 is checkout successful
+        if (res.data.momoData.resultCode == 0 && !orderCreated) {
           const orderPayloadStr = localStorage.getItem("pendingOrder");
           if (orderPayloadStr) {
             const orderPayload = JSON.parse(orderPayloadStr);
-            if (orderPayload.isCreateBooking) {
-              const {
-                paymentMethod,
-                totalPrice,
-                isCreateBooking,
-                ...bookingPayload
-              } = orderPayload;
-              // Nếu là booking thì gọi BookingService
-              await BookingService.createBooking(bookingPayload);
-            } else {
-              // Nếu là order thì gọi OrderService
-              await OrderService.createOrder(orderPayload);
-            }
+            await OrderService.createOrder(orderPayload);
             setOrderCreated(true);
             localStorage.removeItem("pendingOrder");
           }
@@ -246,7 +234,7 @@ const VnPayReturn = () => {
   );
 };
 
-const VnPayReturnWrapper = () => {
+const MomoReturnWrapper = () => {
   return (
     <Suspense
       fallback={
@@ -260,9 +248,9 @@ const VnPayReturnWrapper = () => {
         </div>
       }
     >
-      <VnPayReturn />
+      <MomoReturn />
     </Suspense>
   );
 };
 
-export default VnPayReturnWrapper;
+export default MomoReturnWrapper;
